@@ -1,32 +1,26 @@
 "use client"
 
 import { useState } from "react"
-import { Download, RefreshCw } from "lucide-react"
+import { Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { generatePDF, generateDOCX, refreshOutput, type OutputType, type FileAttachment } from "@/app/actions"
+import { generatePDF, generateDOCX, type OutputType, type FileAttachment } from "@/app/actions"
 import { useImageUpload } from "./image-upload-context"
+import { Spinner } from "./spinner"
+import { useToast } from "@/hooks/use-toast"
 
 interface OutputActionsProps {
   content: string
   title: string
   outputType: OutputType
   fileAttachments: FileAttachment[]
-  onRefresh: (newContent: string) => void
   disabled?: boolean
 }
 
-export function OutputActions({
-  content,
-  title,
-  outputType,
-  fileAttachments,
-  onRefresh,
-  disabled = false,
-}: OutputActionsProps) {
+export function OutputActions({ content, title, outputType, fileAttachments, disabled = false }: OutputActionsProps) {
   const { getAllImages } = useImageUpload()
+  const { toast } = useToast()
   const [isGenerating, setIsGenerating] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const handleDownload = async (format: "pdf" | "docx") => {
     if (!content) return
@@ -38,10 +32,10 @@ export function OutputActions({
       const images = getAllImages()
 
       if (format === "pdf") {
-        dataUri = await generatePDF(content, title, images)
+        dataUri = await generatePDF(content, title)
         filename = `${title.toLowerCase().replace(/\s+/g, "-")}.pdf`
       } else {
-        dataUri = await generateDOCX(content, title, images)
+        dataUri = await generateDOCX(content, title)
         filename = `${title.toLowerCase().replace(/\s+/g, "-")}.docx`
       }
 
@@ -52,57 +46,53 @@ export function OutputActions({
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+
+      toast({
+        title: "Download started",
+        description: `Your ${format.toUpperCase()} file is being downloaded`,
+        type: "success",
+        duration: 3000, // Short duration for success messages
+      })
     } catch (error) {
       console.error(`Error generating ${format}:`, error)
+      toast({
+        title: "Download failed",
+        description:
+          error instanceof Error ? error.message : `Failed to generate ${format.toUpperCase()} file. Please try again.`,
+        type: "error",
+        duration: 7000, // Longer duration for error messages
+      })
     } finally {
       setIsGenerating(false)
     }
   }
 
-  const handleRefresh = async () => {
-    if (fileAttachments.length === 0) return
-
-    setIsRefreshing(true)
-    try {
-      const newContent = await refreshOutput(fileAttachments, outputType)
-      onRefresh(newContent)
-    } catch (error) {
-      console.error("Error refreshing content:", error)
-    } finally {
-      setIsRefreshing(false)
-    }
-  }
-
   return (
-    <div className="flex items-center gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        className="flex items-center gap-1"
-        disabled={disabled || isRefreshing || fileAttachments.length === 0}
-        onClick={handleRefresh}
-      >
-        <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-        <span className="sr-only">Refresh</span>
-      </Button>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1"
-            disabled={disabled || isGenerating || !content}
-          >
-            <Download className="h-4 w-4" />
-            {isGenerating ? "Generating..." : "Download"}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => handleDownload("pdf")}>Download as PDF</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleDownload("docx")}>Download as Word Document</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-1"
+          disabled={disabled || isGenerating || !content}
+        >
+          {isGenerating ? (
+            <>
+              <Spinner className="h-4 w-4 mr-1" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Download className="h-4 w-4 mr-1" />
+              Generating...
+            </>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => handleDownload("pdf")}>Download as PDF</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleDownload("docx")}>Download as Word Document</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
