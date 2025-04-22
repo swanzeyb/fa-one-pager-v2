@@ -1,5 +1,7 @@
 'use client'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks'
 
 interface MarkdownRendererProps {
   content: string
@@ -13,6 +15,7 @@ export function MarkdownRenderer({
   return (
     <div className={`markdown-content ${className}`}>
       <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{
           h1: ({ node, ...props }) => (
             <h1 className="text-2xl font-bold mt-6 mb-4" {...props} />
@@ -26,7 +29,9 @@ export function MarkdownRenderer({
           h4: ({ node, ...props }) => (
             <h4 className="text-base font-bold mt-3 mb-2" {...props} />
           ),
-          p: ({ node, ...props }) => <p className="mb-4" {...props} />,
+          p: ({ node, ...props }) => (
+            <p className="mb-4 whitespace-pre-line" {...props} />
+          ),
           ul: ({ node, ...props }) => (
             <ul className="list-disc pl-6 mb-4" {...props} />
           ),
