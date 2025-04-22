@@ -16,6 +16,14 @@ export type FileAttachment = {
 
 const gemini = google('gemini-2.5-pro-exp-03-25')
 
+function cleanResponse(response: string) {
+  return response
+    .replaceAll('```markdown', '')
+    .replaceAll('```', '')
+    .replaceAll('`', '')
+    .replaceAll('\n\n', '\n')
+}
+
 export async function processFiles(fileAttachments: FileAttachment[]) {
   // Create file parts for each attachment
   const fileParts = fileAttachments.map((file) => ({
@@ -92,15 +100,9 @@ export async function processFiles(fileAttachments: FileAttachment[]) {
   ])
 
   return {
-    shortSummary: shortSummary.text
-      .replaceAll('```markdown', '')
-      .replaceAll('```', ''),
-    mediumSummary: mediumSummary.text
-      .replaceAll('```markdown', '')
-      .replaceAll('```', ''),
-    howToGuide: howToGuide.text
-      .replaceAll('```markdown', '')
-      .replaceAll('```', ''),
+    shortSummary: cleanResponse(shortSummary.text),
+    mediumSummary: cleanResponse(mediumSummary.text),
+    howToGuide: cleanResponse(howToGuide.text),
   }
 }
 
@@ -134,11 +136,11 @@ export async function refreshOutput(
   ]
 
   const result = await generateText({
-    model: google('gemini-2.0-flash'),
+    model: gemini,
     messages: messages,
   })
 
-  return result.text
+  return cleanResponse(result.text)
 }
 
 export async function generatePDF(content: string, title: string) {
