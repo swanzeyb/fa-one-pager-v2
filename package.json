@@ -61,7 +61,8 @@
     "ai": "latest",
     "@ai-sdk/openai": "latest",
     "jspdf": "latest",
-    "docx": "latest"
+    "docx": "latest",
+    "react-markdown": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

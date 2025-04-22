@@ -13,15 +13,15 @@ export async function processFiles(fileContents: string[]) {
   const [shortSummary, mediumSummary, howToGuide] = await Promise.all([
     generateText({
       model: openai("gpt-4o"),
-      prompt: `Provide a short summary (2-3 sentences) of the following content:\n\n${combinedContent}`,
+      prompt: `Provide a short summary (2-3 sentences) of the following content. Format your response in Markdown with appropriate headings, lists, and emphasis where relevant:\n\n${combinedContent}`,
     }),
     generateText({
       model: openai("gpt-4o"),
-      prompt: `Provide a medium-length summary (1-2 paragraphs) of the following content:\n\n${combinedContent}`,
+      prompt: `Provide a medium-length summary (1-2 paragraphs) of the following content. Format your response in Markdown with appropriate headings, lists, and emphasis where relevant:\n\n${combinedContent}`,
     }),
     generateText({
       model: openai("gpt-4o"),
-      prompt: `Create a how-to guide based on the following content:\n\n${combinedContent}`,
+      prompt: `Create a comprehensive how-to guide based on the following content. Format your response in Markdown with clear headings, numbered steps, code blocks if applicable, and emphasis for important points:\n\n${combinedContent}`,
     }),
   ])
 
@@ -38,13 +38,13 @@ export async function refreshOutput(fileContents: string[], outputType: OutputTy
   let prompt = ""
   switch (outputType) {
     case "shortSummary":
-      prompt = `Provide a short summary (2-3 sentences) of the following content:\n\n${combinedContent}`
+      prompt = `Provide a short summary (2-3 sentences) of the following content. Format your response in Markdown with appropriate headings, lists, and emphasis where relevant:\n\n${combinedContent}`
       break
     case "mediumSummary":
-      prompt = `Provide a medium-length summary (1-2 paragraphs) of the following content:\n\n${combinedContent}`
+      prompt = `Provide a medium-length summary (1-2 paragraphs) of the following content. Format your response in Markdown with appropriate headings, lists, and emphasis where relevant:\n\n${combinedContent}`
       break
     case "howToGuide":
-      prompt = `Create a how-to guide based on the following content:\n\n${combinedContent}`
+      prompt = `Create a comprehensive how-to guide based on the following content. Format your response in Markdown with clear headings, numbered steps, code blocks if applicable, and emphasis for important points:\n\n${combinedContent}`
       break
   }
 
@@ -57,6 +57,8 @@ export async function refreshOutput(fileContents: string[], outputType: OutputTy
 }
 
 export async function generatePDF(content: string, title: string) {
+  // For PDF generation, we'll use a simple approach that doesn't preserve
+  // all Markdown formatting, but handles basic text
   const doc = new jsPDF()
 
   // Add title

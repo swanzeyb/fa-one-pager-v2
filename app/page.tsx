@@ -10,6 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { processFiles, type OutputType } from "./actions"
 import { OutputActions } from "@/components/output-actions"
+import { MarkdownRenderer } from "@/components/markdown-renderer"
 
 export default function FileUploadInterface() {
   const [files, setFiles] = useState<File[]>([])
@@ -157,7 +158,7 @@ export default function FileUploadInterface() {
                   </div>
                   <ScrollArea className="h-[calc(100vh-300px)]">
                     {outputs.shortSummary ? (
-                      <p className="text-sm">{outputs.shortSummary}</p>
+                      <MarkdownRenderer content={outputs.shortSummary} />
                     ) : (
                       <p className="text-sm text-muted-foreground">
                         Upload and process files to see the short summary.
@@ -181,7 +182,7 @@ export default function FileUploadInterface() {
                   </div>
                   <ScrollArea className="h-[calc(100vh-300px)]">
                     {outputs.mediumSummary ? (
-                      <p className="text-sm">{outputs.mediumSummary}</p>
+                      <MarkdownRenderer content={outputs.mediumSummary} />
                     ) : (
                       <p className="text-sm text-muted-foreground">
                         Upload and process files to see the medium summary.
@@ -205,7 +206,7 @@ export default function FileUploadInterface() {
                   </div>
                   <ScrollArea className="h-[calc(100vh-300px)]">
                     {outputs.howToGuide ? (
-                      <p className="text-sm">{outputs.howToGuide}</p>
+                      <MarkdownRenderer content={outputs.howToGuide} />
                     ) : (
                       <p className="text-sm text-muted-foreground">Upload and process files to see the how-to guide.</p>
                     )}
