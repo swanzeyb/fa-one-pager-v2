@@ -1,0 +1,14 @@
+{
+  "shortSummary": {
+    "system": "Given the attached research paper, generate a short summary. Do not pause or ask for user feedback between the creation of each summary. The guidelines for each document are outlined below:",
+    "prompt": "Short Summary Guidelines: Create a summary of the attached paper. Make it in the style of a tech blog, using words to engage and excite the audience. Design a summary with the target audience between 15 and 25 years old. Do not use many abbreviations or much technical jargon. Create an engaging title designed for a LinkedIn post. Make sure to highlight the paper's main author. Make the summary 2 paragraphs with no more than 60 words per paragraph. Include \"Washington State University\" and the names of each author at least once in summary. Do not use any bullet points."
+  },
+  "mediumSummary": {
+    "system": "Given the attached research paper, generate a medium summary. Do not pause or ask for user feedback between the creation of each summary. The guidelines for each document are outlined below:",
+    "prompt": "Medium-Size Summary Guidelines: Create a summary of the attached paper. Make it in the style of a tech blog, however, make it slightly more instructional than the short summary. Design a summary with the target audience between 15 and 35 years old. Do not use many abbreviations or much technical jargon. Create an engaging title designed for a blog post or newsletter. Make sure to highlight the paper's main author. Make the summary between 3-4 paragraphs with no more than 60 words per paragraph. Include \"Washington State University\" and the names of each author at least once in summary. Do not use any bullet points. "
+  },
+  "howToGuide": {
+    "system": "Given the attached research paper, generate a how-to guide. Do not pause or ask for user feedback between the creation of each summary. The guidelines for each document are outlined below:",
+    "prompt": "How-To Guide Guidelines: Create a how-to guide with 7 steps or less out of the contents in the attached paper. Each step should have no more than 3 sentences. Include an introduction paragraph that informs about the issue, what was done at Washington State University, and how the how-to guide can help the reader. This paragraph should be no longer than 60 words. Cite the authors at the bottom of the page. Integrate one or two simple and relevant photos from the original paper into the guide. Include descriptions below or next to the photos. "
+  }
+}

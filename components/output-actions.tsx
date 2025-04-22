@@ -4,13 +4,13 @@ import { useState } from "react"
 import { Download, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { generatePDF, generateDOCX, refreshOutput, type OutputType } from "@/app/actions"
+import { generatePDF, generateDOCX, refreshOutput, type OutputType, type FileAttachment } from "@/app/actions"
 
 interface OutputActionsProps {
   content: string
   title: string
   outputType: OutputType
-  fileContents: string[]
+  fileAttachments: FileAttachment[]
   onRefresh: (newContent: string) => void
   disabled?: boolean
 }
@@ -19,7 +19,7 @@ export function OutputActions({
   content,
   title,
   outputType,
-  fileContents,
+  fileAttachments,
   onRefresh,
   disabled = false,
 }: OutputActionsProps) {
@@ -57,11 +57,11 @@ export function OutputActions({
   }
 
   const handleRefresh = async () => {
-    if (fileContents.length === 0) return
+    if (fileAttachments.length === 0) return
 
     setIsRefreshing(true)
     try {
-      const newContent = await refreshOutput(fileContents, outputType)
+      const newContent = await refreshOutput(fileAttachments, outputType)
       onRefresh(newContent)
     } catch (error) {
       console.error("Error refreshing content:", error)
@@ -76,7 +76,7 @@ export function OutputActions({
         variant="outline"
         size="sm"
         className="flex items-center gap-1"
-        disabled={disabled || isRefreshing || fileContents.length === 0}
+        disabled={disabled || isRefreshing || fileAttachments.length === 0}
         onClick={handleRefresh}
       >
         <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />

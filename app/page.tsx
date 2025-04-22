@@ -8,13 +8,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { processFiles, type OutputType } from "./actions"
+import { processFiles, type OutputType, type FileAttachment } from "./actions"
 import { OutputActions } from "@/components/output-actions"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
 
 export default function FileUploadInterface() {
   const [files, setFiles] = useState<File[]>([])
-  const [fileContents, setFileContents] = useState<string[]>([])
+  const [fileAttachments, setFileAttachments] = useState<FileAttachment[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [outputs, setOutputs] = useState({
@@ -51,6 +51,28 @@ export default function FileUploadInterface() {
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index))
+    setFileAttachments((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  // Helper function to convert a file to a data URL
+  const convertToDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const prepareFileAttachments = async () => {
+    const attachments = await Promise.all(
+      files.map(async (file) => ({
+        name: file.name,
+        contentType: file.type,
+        data: await convertToDataURL(file),
+      })),
+    )
+    setFileAttachments(attachments)
+    return attachments
   }
 
   const processUploadedFiles = async () => {
@@ -58,10 +80,8 @@ export default function FileUploadInterface() {
 
     setIsProcessing(true)
     try {
-      const contents = await Promise.all(files.map((file) => file.text()))
-      setFileContents(contents)
-
-      const results = await processFiles(contents)
+      const attachments = await prepareFileAttachments()
+      const results = await processFiles(attachments)
       setOutputs(results)
     } catch (error) {
       console.error("Error processing files:", error)
@@ -151,7 +171,7 @@ export default function FileUploadInterface() {
                       content={outputs.shortSummary}
                       title="Short Summary"
                       outputType="shortSummary"
-                      fileContents={fileContents}
+                      fileAttachments={fileAttachments}
                       onRefresh={(newContent) => handleRefresh("shortSummary", newContent)}
                       disabled={!outputs.shortSummary}
                     />
@@ -175,7 +195,7 @@ export default function FileUploadInterface() {
                       content={outputs.mediumSummary}
                       title="Medium Summary"
                       outputType="mediumSummary"
-                      fileContents={fileContents}
+                      fileAttachments={fileAttachments}
                       onRefresh={(newContent) => handleRefresh("mediumSummary", newContent)}
                       disabled={!outputs.mediumSummary}
                     />
@@ -199,7 +219,7 @@ export default function FileUploadInterface() {
                       content={outputs.howToGuide}
                       title="How-to Guide"
                       outputType="howToGuide"
-                      fileContents={fileContents}
+                      fileAttachments={fileAttachments}
                       onRefresh={(newContent) => handleRefresh("howToGuide", newContent)}
                       disabled={!outputs.howToGuide}
                     />
