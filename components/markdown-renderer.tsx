@@ -2,15 +2,18 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
+import { ImageUpload } from './image-upload'
 
 interface MarkdownRendererProps {
   content: string
   className?: string
+  editable?: boolean
 }
 
 export function MarkdownRenderer({
   content,
   className = '',
+  editable = false,
 }: MarkdownRendererProps) {
   return (
     <div className={`markdown-content ${className}`}>
@@ -92,9 +95,16 @@ export function MarkdownRenderer({
           hr: ({ node, ...props }) => (
             <hr className="my-6 border-t border-gray-300" {...props} />
           ),
-          img: ({ node, ...props }) => (
-            <img className="max-w-full h-auto my-4 rounded" {...props} />
-          ),
+          img: editable
+            ? ({ node, ...props }) => (
+                <ImageUpload
+                  alt={props.alt || ''}
+                  src={props.src || '/placeholder.svg'}
+                />
+              )
+            : ({ node, ...props }) => (
+                <img className="max-w-full h-auto my-4 rounded" {...props} />
+              ),
         }}
       >
         {content}

@@ -1,16 +1,16 @@
-"use client"
+'use client'
 
-import type React from "react"
+import type React from 'react'
 
-import { useState } from "react"
-import { Upload, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { processFiles, type OutputType, type FileAttachment } from "./actions"
-import { OutputActions } from "@/components/output-actions"
-import { MarkdownRenderer } from "@/components/markdown-renderer"
+import { useState } from 'react'
+import { Upload, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { processFiles, type OutputType, type FileAttachment } from './actions'
+import { OutputActions } from '@/components/output-actions'
+import { MarkdownRenderer } from '@/components/markdown-renderer'
 
 export default function FileUploadInterface() {
   const [files, setFiles] = useState<File[]>([])
@@ -18,9 +18,9 @@ export default function FileUploadInterface() {
   const [isDragging, setIsDragging] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [outputs, setOutputs] = useState({
-    shortSummary: "",
-    mediumSummary: "",
-    howToGuide: "",
+    shortSummary: '',
+    mediumSummary: '',
+    howToGuide: '',
   })
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -69,7 +69,7 @@ export default function FileUploadInterface() {
         name: file.name,
         contentType: file.type,
         data: await convertToDataURL(file),
-      })),
+      }))
     )
     setFileAttachments(attachments)
     return attachments
@@ -84,7 +84,7 @@ export default function FileUploadInterface() {
       const results = await processFiles(attachments)
       setOutputs(results)
     } catch (error) {
-      console.error("Error processing files:", error)
+      console.error('Error processing files:', error)
       // You might want to show an error message to the user here
     } finally {
       setIsProcessing(false)
@@ -109,7 +109,9 @@ export default function FileUploadInterface() {
           <CardContent className="flex flex-col h-[calc(100%-4rem)]">
             <div
               className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center h-64 mb-4 transition-colors ${
-                isDragging ? "border-primary bg-primary/10" : "border-muted-foreground/25"
+                isDragging
+                  ? 'border-primary bg-primary/10'
+                  : 'border-muted-foreground/25'
               }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -119,8 +121,17 @@ export default function FileUploadInterface() {
               <p className="text-sm text-muted-foreground text-center mb-2">
                 Drag and drop files here or click to browse
               </p>
-              <input type="file" id="file-upload" multiple className="hidden" onChange={handleFileChange} />
-              <Button variant="outline" onClick={() => document.getElementById("file-upload")?.click()}>
+              <input
+                type="file"
+                id="file-upload"
+                multiple
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <Button
+                variant="outline"
+                onClick={() => document.getElementById('file-upload')?.click()}
+              >
                 Select Files
               </Button>
             </div>
@@ -128,13 +139,23 @@ export default function FileUploadInterface() {
             <h3 className="text-sm font-medium mb-2">Uploaded Files</h3>
             <ScrollArea className="flex-grow mb-4">
               {files.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No files uploaded yet</p>
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No files uploaded yet
+                </p>
               ) : (
                 <ul className="space-y-2">
                   {files.map((file, index) => (
-                    <li key={index} className="flex items-center justify-between text-sm p-2 bg-muted rounded-md">
+                    <li
+                      key={index}
+                      className="flex items-center justify-between text-sm p-2 bg-muted rounded-md"
+                    >
                       <span className="truncate max-w-[80%]">{file.name}</span>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(index)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => removeFile(index)}
+                      >
                         <X className="h-4 w-4" />
                         <span className="sr-only">Remove file</span>
                       </Button>
@@ -143,8 +164,11 @@ export default function FileUploadInterface() {
                 </ul>
               )}
             </ScrollArea>
-            <Button onClick={processUploadedFiles} disabled={files.length === 0 || isProcessing}>
-              {isProcessing ? "Processing..." : "Process Files"}
+            <Button
+              onClick={processUploadedFiles}
+              disabled={files.length === 0 || isProcessing}
+            >
+              {isProcessing ? 'Processing...' : 'Process Files'}
             </Button>
           </CardContent>
         </Card>
@@ -172,13 +196,18 @@ export default function FileUploadInterface() {
                       title="Short Summary"
                       outputType="shortSummary"
                       fileAttachments={fileAttachments}
-                      onRefresh={(newContent) => handleRefresh("shortSummary", newContent)}
+                      onRefresh={(newContent) =>
+                        handleRefresh('shortSummary', newContent)
+                      }
                       disabled={!outputs.shortSummary}
                     />
                   </div>
                   <ScrollArea className="h-[calc(100vh-300px)]">
                     {outputs.shortSummary ? (
-                      <MarkdownRenderer content={outputs.shortSummary} />
+                      <MarkdownRenderer
+                        content={outputs.shortSummary}
+                        editable={true}
+                      />
                     ) : (
                       <p className="text-sm text-muted-foreground">
                         Upload and process files to see the short summary.
@@ -196,13 +225,18 @@ export default function FileUploadInterface() {
                       title="Medium Summary"
                       outputType="mediumSummary"
                       fileAttachments={fileAttachments}
-                      onRefresh={(newContent) => handleRefresh("mediumSummary", newContent)}
+                      onRefresh={(newContent) =>
+                        handleRefresh('mediumSummary', newContent)
+                      }
                       disabled={!outputs.mediumSummary}
                     />
                   </div>
                   <ScrollArea className="h-[calc(100vh-300px)]">
                     {outputs.mediumSummary ? (
-                      <MarkdownRenderer content={outputs.mediumSummary} />
+                      <MarkdownRenderer
+                        content={outputs.mediumSummary}
+                        editable={true}
+                      />
                     ) : (
                       <p className="text-sm text-muted-foreground">
                         Upload and process files to see the medium summary.
@@ -220,15 +254,22 @@ export default function FileUploadInterface() {
                       title="How-to Guide"
                       outputType="howToGuide"
                       fileAttachments={fileAttachments}
-                      onRefresh={(newContent) => handleRefresh("howToGuide", newContent)}
+                      onRefresh={(newContent) =>
+                        handleRefresh('howToGuide', newContent)
+                      }
                       disabled={!outputs.howToGuide}
                     />
                   </div>
                   <ScrollArea className="h-[calc(100vh-300px)]">
                     {outputs.howToGuide ? (
-                      <MarkdownRenderer content={outputs.howToGuide} />
+                      <MarkdownRenderer
+                        content={outputs.howToGuide}
+                        editable={true}
+                      />
                     ) : (
-                      <p className="text-sm text-muted-foreground">Upload and process files to see the how-to guide.</p>
+                      <p className="text-sm text-muted-foreground">
+                        Upload and process files to see the how-to guide.
+                      </p>
                     )}
                   </ScrollArea>
                 </div>
