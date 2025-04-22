@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { processFiles } from "./actions"
-import { DownloadButton } from "@/components/download-button"
+import { processFiles, type OutputType } from "./actions"
+import { OutputActions } from "@/components/output-actions"
 
 export default function FileUploadInterface() {
   const [files, setFiles] = useState<File[]>([])
+  const [fileContents, setFileContents] = useState<string[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [outputs, setOutputs] = useState({
@@ -56,8 +57,10 @@ export default function FileUploadInterface() {
 
     setIsProcessing(true)
     try {
-      const fileContents = await Promise.all(files.map((file) => file.text()))
-      const results = await processFiles(fileContents)
+      const contents = await Promise.all(files.map((file) => file.text()))
+      setFileContents(contents)
+
+      const results = await processFiles(contents)
       setOutputs(results)
     } catch (error) {
       console.error("Error processing files:", error)
@@ -65,6 +68,13 @@ export default function FileUploadInterface() {
     } finally {
       setIsProcessing(false)
     }
+  }
+
+  const handleRefresh = (outputType: OutputType, newContent: string) => {
+    setOutputs((prev) => ({
+      ...prev,
+      [outputType]: newContent,
+    }))
   }
 
   return (
@@ -136,9 +146,12 @@ export default function FileUploadInterface() {
                 <div className="p-4 border rounded-md">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-sm font-medium">Short Summary</h3>
-                    <DownloadButton
+                    <OutputActions
                       content={outputs.shortSummary}
                       title="Short Summary"
+                      outputType="shortSummary"
+                      fileContents={fileContents}
+                      onRefresh={(newContent) => handleRefresh("shortSummary", newContent)}
                       disabled={!outputs.shortSummary}
                     />
                   </div>
@@ -157,9 +170,12 @@ export default function FileUploadInterface() {
                 <div className="p-4 border rounded-md">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-sm font-medium">Medium Summary</h3>
-                    <DownloadButton
+                    <OutputActions
                       content={outputs.mediumSummary}
                       title="Medium Summary"
+                      outputType="mediumSummary"
+                      fileContents={fileContents}
+                      onRefresh={(newContent) => handleRefresh("mediumSummary", newContent)}
                       disabled={!outputs.mediumSummary}
                     />
                   </div>
@@ -178,7 +194,14 @@ export default function FileUploadInterface() {
                 <div className="p-4 border rounded-md">
                   <div className="flex justify-between items-center mb-3">
                     <h3 className="text-sm font-medium">How-to Guide</h3>
-                    <DownloadButton content={outputs.howToGuide} title="How-to Guide" disabled={!outputs.howToGuide} />
+                    <OutputActions
+                      content={outputs.howToGuide}
+                      title="How-to Guide"
+                      outputType="howToGuide"
+                      fileContents={fileContents}
+                      onRefresh={(newContent) => handleRefresh("howToGuide", newContent)}
+                      disabled={!outputs.howToGuide}
+                    />
                   </div>
                   <ScrollArea className="h-[calc(100vh-300px)]">
                     {outputs.howToGuide ? (

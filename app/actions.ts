@@ -1,26 +1,26 @@
-'use server'
+"use server"
 
-import { generateText } from 'ai'
-import { google } from '@ai-sdk/google'
-import { jsPDF } from 'jspdf'
-import { Document, Packer, Paragraph, TextRun } from 'docx'
+import { generateText } from "ai"
+import { openai } from "@ai-sdk/openai"
+import { jsPDF } from "jspdf"
+import { Document, Packer, Paragraph, TextRun } from "docx"
 
-const GENERATIVE_MODEL_NAME = 'gemini-2.0-flash'
+export type OutputType = "shortSummary" | "mediumSummary" | "howToGuide"
 
 export async function processFiles(fileContents: string[]) {
-  const combinedContent = fileContents.join('\n\n')
+  const combinedContent = fileContents.join("\n\n")
 
   const [shortSummary, mediumSummary, howToGuide] = await Promise.all([
     generateText({
-      model: google(GENERATIVE_MODEL_NAME),
+      model: openai("gpt-4o"),
       prompt: `Provide a short summary (2-3 sentences) of the following content:\n\n${combinedContent}`,
     }),
     generateText({
-      model: google(GENERATIVE_MODEL_NAME),
+      model: openai("gpt-4o"),
       prompt: `Provide a medium-length summary (1-2 paragraphs) of the following content:\n\n${combinedContent}`,
     }),
     generateText({
-      model: google(GENERATIVE_MODEL_NAME),
+      model: openai("gpt-4o"),
       prompt: `Create a how-to guide based on the following content:\n\n${combinedContent}`,
     }),
   ])
@@ -30,6 +30,30 @@ export async function processFiles(fileContents: string[]) {
     mediumSummary: mediumSummary.text,
     howToGuide: howToGuide.text,
   }
+}
+
+export async function refreshOutput(fileContents: string[], outputType: OutputType) {
+  const combinedContent = fileContents.join("\n\n")
+
+  let prompt = ""
+  switch (outputType) {
+    case "shortSummary":
+      prompt = `Provide a short summary (2-3 sentences) of the following content:\n\n${combinedContent}`
+      break
+    case "mediumSummary":
+      prompt = `Provide a medium-length summary (1-2 paragraphs) of the following content:\n\n${combinedContent}`
+      break
+    case "howToGuide":
+      prompt = `Create a how-to guide based on the following content:\n\n${combinedContent}`
+      break
+  }
+
+  const result = await generateText({
+    model: openai("gpt-4o"),
+    prompt,
+  })
+
+  return result.text
 }
 
 export async function generatePDF(content: string, title: string) {
@@ -45,7 +69,7 @@ export async function generatePDF(content: string, title: string) {
   doc.text(splitText, 20, 30)
 
   // Return base64 encoded PDF
-  return doc.output('datauristring')
+  return doc.output("datauristring")
 }
 
 export async function generateDOCX(content: string, title: string) {
@@ -81,7 +105,7 @@ export async function generateDOCX(content: string, title: string) {
   const buffer = await Packer.toBuffer(doc)
 
   // Convert buffer to base64
-  const base64 = Buffer.from(buffer).toString('base64')
+  const base64 = Buffer.from(buffer).toString("base64")
 
   // Return as data URI
   return `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`
