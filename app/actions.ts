@@ -1,12 +1,12 @@
-"use server"
+'use server'
 
-import { generateText } from "ai"
-import { google } from "@ai-sdk/google"
-import { jsPDF } from "jspdf"
-import { Document, Packer, Paragraph, TextRun } from "docx"
-import prompts from "./prompts.json"
+import { generateText } from 'ai'
+import { google } from '@ai-sdk/google'
+import { jsPDF } from 'jspdf'
+import { Document, Packer, Paragraph, TextRun } from 'docx'
+import prompts from './prompts.json'
 
-export type OutputType = "shortSummary" | "mediumSummary" | "howToGuide"
+export type OutputType = 'shortSummary' | 'mediumSummary' | 'howToGuide'
 
 export type FileAttachment = {
   name: string
@@ -14,10 +14,12 @@ export type FileAttachment = {
   data: string
 }
 
+const gemini = google('gemini-2.5-pro-exp-03-25')
+
 export async function processFiles(fileAttachments: FileAttachment[]) {
   // Create file parts for each attachment
   const fileParts = fileAttachments.map((file) => ({
-    type: "file" as const,
+    type: 'file' as const,
     data: file.data,
     mimeType: file.contentType,
   }))
@@ -25,14 +27,14 @@ export async function processFiles(fileAttachments: FileAttachment[]) {
   // Create messages arrays for each output type
   const shortSummaryMessages = [
     {
-      role: "system" as const,
+      role: 'system' as const,
       content: prompts.shortSummary.system,
     },
     {
-      role: "user" as const,
+      role: 'user' as const,
       content: [
         {
-          type: "text" as const,
+          type: 'text' as const,
           text: prompts.shortSummary.prompt,
         },
         ...fileParts,
@@ -42,14 +44,14 @@ export async function processFiles(fileAttachments: FileAttachment[]) {
 
   const mediumSummaryMessages = [
     {
-      role: "system" as const,
+      role: 'system' as const,
       content: prompts.mediumSummary.system,
     },
     {
-      role: "user" as const,
+      role: 'user' as const,
       content: [
         {
-          type: "text" as const,
+          type: 'text' as const,
           text: prompts.mediumSummary.prompt,
         },
         ...fileParts,
@@ -59,14 +61,14 @@ export async function processFiles(fileAttachments: FileAttachment[]) {
 
   const howToGuideMessages = [
     {
-      role: "system" as const,
+      role: 'system' as const,
       content: prompts.howToGuide.system,
     },
     {
-      role: "user" as const,
+      role: 'user' as const,
       content: [
         {
-          type: "text" as const,
+          type: 'text' as const,
           text: prompts.howToGuide.prompt,
         },
         ...fileParts,
@@ -76,30 +78,39 @@ export async function processFiles(fileAttachments: FileAttachment[]) {
 
   const [shortSummary, mediumSummary, howToGuide] = await Promise.all([
     generateText({
-      model: google("gemini-2.0-flash"),
+      model: gemini,
       messages: shortSummaryMessages,
     }),
     generateText({
-      model: google("gemini-2.0-flash"),
+      model: gemini,
       messages: mediumSummaryMessages,
     }),
     generateText({
-      model: google("gemini-2.0-flash"),
+      model: gemini,
       messages: howToGuideMessages,
     }),
   ])
 
   return {
-    shortSummary: shortSummary.text,
-    mediumSummary: mediumSummary.text,
-    howToGuide: howToGuide.text,
+    shortSummary: shortSummary.text
+      .replaceAll('```markdown', '')
+      .replaceAll('```', ''),
+    mediumSummary: mediumSummary.text
+      .replaceAll('```markdown', '')
+      .replaceAll('```', ''),
+    howToGuide: howToGuide.text
+      .replaceAll('```markdown', '')
+      .replaceAll('```', ''),
   }
 }
 
-export async function refreshOutput(fileAttachments: FileAttachment[], outputType: OutputType) {
+export async function refreshOutput(
+  fileAttachments: FileAttachment[],
+  outputType: OutputType
+) {
   // Create file parts for each attachment
   const fileParts = fileAttachments.map((file) => ({
-    type: "file" as const,
+    type: 'file' as const,
     data: file.data,
     mimeType: file.contentType,
   }))
@@ -107,14 +118,14 @@ export async function refreshOutput(fileAttachments: FileAttachment[], outputTyp
   // Create messages array for the specified output type
   const messages = [
     {
-      role: "system" as const,
+      role: 'system' as const,
       content: prompts[outputType].system,
     },
     {
-      role: "user" as const,
+      role: 'user' as const,
       content: [
         {
-          type: "text" as const,
+          type: 'text' as const,
           text: prompts[outputType].prompt,
         },
         ...fileParts,
@@ -123,7 +134,7 @@ export async function refreshOutput(fileAttachments: FileAttachment[], outputTyp
   ]
 
   const result = await generateText({
-    model: google("gemini-2.0-flash"),
+    model: google('gemini-2.0-flash'),
     messages: messages,
   })
 
@@ -143,7 +154,7 @@ export async function generatePDF(content: string, title: string) {
   doc.text(splitText, 20, 30)
 
   // Return base64 encoded PDF
-  return doc.output("datauristring")
+  return doc.output('datauristring')
 }
 
 export async function generateDOCX(content: string, title: string) {
@@ -179,7 +190,7 @@ export async function generateDOCX(content: string, title: string) {
   const buffer = await Packer.toBuffer(doc)
 
   // Convert buffer to base64
-  const base64 = Buffer.from(buffer).toString("base64")
+  const base64 = Buffer.from(buffer).toString('base64')
 
   // Return as data URI
   return `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`
