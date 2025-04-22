@@ -5,6 +5,7 @@ import { Download, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { generatePDF, generateDOCX, refreshOutput, type OutputType, type FileAttachment } from "@/app/actions"
+import { useImageUpload } from "./image-upload-context"
 
 interface OutputActionsProps {
   content: string
@@ -23,6 +24,7 @@ export function OutputActions({
   onRefresh,
   disabled = false,
 }: OutputActionsProps) {
+  const { getAllImages } = useImageUpload()
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -33,12 +35,13 @@ export function OutputActions({
     try {
       let dataUri: string
       let filename: string
+      const images = getAllImages()
 
       if (format === "pdf") {
-        dataUri = await generatePDF(content, title)
+        dataUri = await generatePDF(content, title, images)
         filename = `${title.toLowerCase().replace(/\s+/g, "-")}.pdf`
       } else {
-        dataUri = await generateDOCX(content, title)
+        dataUri = await generateDOCX(content, title, images)
         filename = `${title.toLowerCase().replace(/\s+/g, "-")}.docx`
       }
 
