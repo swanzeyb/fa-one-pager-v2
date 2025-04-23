@@ -9,6 +9,7 @@ import { useImageUpload } from "./image-upload-context"
 import { Spinner } from "./spinner"
 import { useToast } from "@/hooks/use-toast"
 import { useOutput } from "./output/output-context"
+import { parseHtmlToStructure, structureToHtml } from "@/utils/html-parser"
 
 interface OutputActionsProps {
   content: string
@@ -25,21 +26,30 @@ export function OutputActions({ content, title, outputType, fileAttachments, dis
   const [isGenerating, setIsGenerating] = useState(false)
 
   const handleDownload = async (format: "pdf" | "docx") => {
-    // Get the potentially edited content
-    const currentContent = getOutputContent(outputType)
+    // Use the HTML content passed directly, or fall back to the output context
+    const currentContent = content || getOutputContent(outputType)
     if (!currentContent) return
 
     setIsGenerating(true)
     try {
+      // Parse the HTML content into a structured format
+      const structuredContent = parseHtmlToStructure(currentContent)
+      console.log("Structured content:", structuredContent)
+
+      // Convert back to HTML for the server action
+      // In a real implementation, you would send the structured content directly
+      // and handle the conversion on the server
+      const processedHtml = structureToHtml(structuredContent)
+
       let dataUri: string
       let filename: string
       const images = getAllImages()
 
       if (format === "pdf") {
-        dataUri = await generatePDF(currentContent, title)
+        dataUri = await generatePDF(processedHtml, title)
         filename = `${title.toLowerCase().replace(/\s+/g, "-")}.pdf`
       } else {
-        dataUri = await generateDOCX(currentContent, title)
+        dataUri = await generateDOCX(processedHtml, title)
         filename = `${title.toLowerCase().replace(/\s+/g, "-")}.docx`
       }
 

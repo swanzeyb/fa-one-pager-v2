@@ -8,9 +8,11 @@ import { Spinner } from "@/components/spinner"
 import { OutputActions } from "@/components/output-actions"
 import { OutputProvider, useOutput, getOutputTypeTitle } from "./output-context"
 import { useFileUpload } from "../file-upload/file-upload-context"
-import { SimpleEditor } from "../simple-editor"
+import { SimpleEditor, Toolbar, EditorContent, useSimpleEditor } from "../simple-editor"
+import { structureToHtml } from "@/utils/html-parser"
 import type { OutputType } from "@/app/actions"
 import type React from "react"
+import { useState, useRef } from "react"
 
 interface OutputProps {
   children: React.ReactNode
@@ -57,6 +59,24 @@ export function OutputTabs({ children }: OutputTabsProps) {
   )
 }
 
+// Create a wrapper component to access the editor context
+function EditorWithActions({ outputType, title, fileAttachments, disabled = false }) {
+  const { structuredContent } = useSimpleEditor()
+
+  // Convert structured content to HTML for the server action
+  const htmlContent = structureToHtml(structuredContent)
+
+  return (
+    <OutputActions
+      content={htmlContent}
+      title={title}
+      outputType={outputType}
+      fileAttachments={fileAttachments}
+      disabled={disabled}
+    />
+  )
+}
+
 interface OutputTabContentProps {
   value: OutputType
   children?: React.ReactNode
@@ -65,6 +85,8 @@ interface OutputTabContentProps {
 export function OutputTabContent({ value, children }: OutputTabContentProps) {
   const { outputs, errors, isProcessing, processOutputType, updateEditedOutput } = useOutput()
   const { files, fileAttachments, prepareFileAttachments } = useFileUpload()
+  const [editorContent, setEditorContent] = useState("")
+  const editorRef = useRef(null)
 
   const handleGenerate = async () => {
     const attachments = await prepareFileAttachments()
@@ -72,6 +94,7 @@ export function OutputTabContent({ value, children }: OutputTabContentProps) {
   }
 
   const handleEditorChange = (content: string) => {
+    setEditorContent(content)
     updateEditedOutput(value, content)
   }
 
@@ -90,7 +113,12 @@ export function OutputTabContent({ value, children }: OutputTabContentProps) {
     }
 
     if (outputs[value]) {
-      return <SimpleEditor content={outputs[value]} onChange={handleEditorChange} />
+      return (
+        <SimpleEditor content={outputs[value]} onChange={handleEditorChange} ref={editorRef}>
+          <Toolbar />
+          <EditorContent />
+        </SimpleEditor>
+      )
     }
 
     return (
@@ -127,13 +155,24 @@ export function OutputTabContent({ value, children }: OutputTabContentProps) {
                 </>
               )}
             </Button>
-            <OutputActions
-              content={outputs[value]}
-              title={getOutputTypeTitle(value)}
-              outputType={value}
-              fileAttachments={fileAttachments}
-              disabled={!outputs[value] || isProcessing[value] || !!errors[value]}
-            />
+            {outputs[value] ? (
+              <SimpleEditor content={outputs[value]}>
+                <EditorWithActions
+                  outputType={value}
+                  title={getOutputTypeTitle(value)}
+                  fileAttachments={fileAttachments}
+                  disabled={!outputs[value] || isProcessing[value] || !!errors[value]}
+                />
+              </SimpleEditor>
+            ) : (
+              <OutputActions
+                content=""
+                title={getOutputTypeTitle(value)}
+                outputType={value}
+                fileAttachments={fileAttachments}
+                disabled={true}
+              />
+            )}
           </div>
         </div>
         <div>{renderContent()}</div>
