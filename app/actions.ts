@@ -3,9 +3,10 @@
 import { generateObject } from "ai"
 import { google } from "@ai-sdk/google"
 import { jsPDF } from "jspdf"
-import { Document, Packer, Paragraph, TextRun } from "docx"
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx"
 import prompts from "./prompts.json"
 import { z } from "zod"
+import { JSDOM } from "jsdom"
 
 export type OutputType = "shortSummary" | "mediumSummary" | "howToGuide"
 
@@ -160,55 +161,354 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>?/gm, "")
 }
 
+// Parse HTML content and apply styling to PDF
 export async function generatePDF(content: string, title: string) {
   const doc = new jsPDF()
-
-  // Check if content is HTML (from the editor)
   const isHtml = content.includes("<") && content.includes(">")
-  const textContent = isHtml ? stripHtml(content) : content
 
-  // Add title
+  if (!isHtml) {
+    // Handle plain text content
+    doc.setFontSize(16)
+    doc.text(title, 20, 20)
+    doc.setFontSize(12)
+    const splitText = doc.splitTextToSize(content, 170)
+    doc.text(splitText, 20, 30)
+    return doc.output("datauristring")
+  }
+
+  // Parse HTML content
+  const dom = new JSDOM(`<div id="content">${content}</div>`)
+  const elements = dom.window.document.querySelectorAll("#content > *")
+
+  // Set up initial PDF state
   doc.setFontSize(16)
+  doc.setFont("helvetica", "bold")
   doc.text(title, 20, 20)
 
-  // Add content with word wrapping
-  doc.setFontSize(12)
-  const splitText = doc.splitTextToSize(textContent, 170)
-  doc.text(splitText, 20, 30)
+  let yPosition = 40 // Start position after title
+  const margin = 20
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const textWidth = pageWidth - margin * 2
+
+  // Process each element
+  elements.forEach((element) => {
+    const tagName = element.tagName.toLowerCase()
+    const text = element.textContent || ""
+
+    // Check if we need a new page
+    if (yPosition > doc.internal.pageSize.getHeight() - 20) {
+      doc.addPage()
+      yPosition = 20
+    }
+
+    // Apply styling based on element type
+    switch (tagName) {
+      case "h1":
+        doc.setFontSize(18)
+        doc.setFont("helvetica", "bold")
+        doc.text(text, margin, yPosition)
+        yPosition += 10
+        break
+
+      case "h2":
+        doc.setFontSize(16)
+        doc.setFont("helvetica", "bold")
+        doc.text(text, margin, yPosition)
+        yPosition += 8
+        break
+
+      case "h3":
+        doc.setFontSize(14)
+        doc.setFont("helvetica", "bold")
+        doc.text(text, margin, yPosition)
+        yPosition += 7
+        break
+
+      case "p":
+        doc.setFontSize(12)
+        doc.setFont("helvetica", "normal")
+
+        // Handle styled text within paragraphs
+        const plainText = text
+        if (element.querySelector("strong, b")) {
+          // This is a simplification - in a real app you'd want to preserve
+          // the exact positions of bold text, not just make the whole paragraph bold
+          doc.setFont("helvetica", "bold")
+        }
+        if (element.querySelector("em, i")) {
+          // Similarly for italic text
+          doc.setFont("helvetica", "italic")
+        }
+
+        const splitText = doc.splitTextToSize(plainText, textWidth)
+        doc.text(splitText, margin, yPosition)
+        yPosition += splitText.length * 7 + 5 // Add space after paragraph
+        break
+
+      case "ul":
+      case "ol":
+        doc.setFontSize(12)
+        doc.setFont("helvetica", "normal")
+        const listItems = element.querySelectorAll("li")
+        listItems.forEach((item, index) => {
+          const prefix = tagName === "ul" ? "• " : `${index + 1}. `
+          const itemText = prefix + (item.textContent || "")
+          const splitItemText = doc.splitTextToSize(itemText, textWidth - 5)
+
+          // Check if we need a new page
+          if (yPosition > doc.internal.pageSize.getHeight() - 20) {
+            doc.addPage()
+            yPosition = 20
+          }
+
+          doc.text(splitItemText, margin, yPosition)
+          yPosition += splitItemText.length * 7 + 2
+        })
+        yPosition += 5 // Add space after list
+        break
+
+      case "blockquote":
+        doc.setFontSize(12)
+        doc.setFont("helvetica", "italic")
+        const quoteText = doc.splitTextToSize(text, textWidth - 10)
+
+        // Draw a line for the blockquote
+        doc.setDrawColor(200, 200, 200)
+        doc.line(margin - 5, yPosition - 5, margin - 5, yPosition + quoteText.length * 7 + 5)
+
+        doc.text(quoteText, margin, yPosition)
+        yPosition += quoteText.length * 7 + 10
+        break
+
+      default:
+        // Handle other elements as plain text
+        if (text.trim()) {
+          doc.setFontSize(12)
+          doc.setFont("helvetica", "normal")
+          const splitText = doc.splitTextToSize(text, textWidth)
+          doc.text(splitText, margin, yPosition)
+          yPosition += splitText.length * 7 + 3
+        }
+    }
+  })
 
   // Return base64 encoded PDF
   return doc.output("datauristring")
 }
 
 export async function generateDOCX(content: string, title: string) {
-  // Check if content is HTML (from the editor)
   const isHtml = content.includes("<") && content.includes(">")
-  const textContent = isHtml ? stripHtml(content) : content
+
+  if (!isHtml) {
+    // Handle plain text content
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: title,
+                  bold: true,
+                  size: 28,
+                }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: content,
+                  size: 24,
+                }),
+              ],
+            }),
+          ],
+        },
+      ],
+    })
+
+    const buffer = await Packer.toBuffer(doc)
+    const base64 = Buffer.from(buffer).toString("base64")
+    return `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`
+  }
+
+  // Parse HTML content
+  const dom = new JSDOM(`<div id="content">${content}</div>`)
+  const elements = dom.window.document.querySelectorAll("#content > *")
+
+  // Create document with title
+  const children = [
+    new Paragraph({
+      heading: HeadingLevel.TITLE,
+      children: [
+        new TextRun({
+          text: title,
+          bold: true,
+          size: 36,
+        }),
+      ],
+    }),
+  ]
+
+  // Process each element
+  elements.forEach((element) => {
+    const tagName = element.tagName.toLowerCase()
+    const text = element.textContent || ""
+
+    if (!text.trim()) return
+
+    // Apply styling based on element type
+    switch (tagName) {
+      case "h1":
+        children.push(
+          new Paragraph({
+            heading: HeadingLevel.HEADING_1,
+            children: [
+              new TextRun({
+                text: text,
+                bold: true,
+                size: 32,
+              }),
+            ],
+          }),
+        )
+        break
+
+      case "h2":
+        children.push(
+          new Paragraph({
+            heading: HeadingLevel.HEADING_2,
+            children: [
+              new TextRun({
+                text: text,
+                bold: true,
+                size: 28,
+              }),
+            ],
+          }),
+        )
+        break
+
+      case "h3":
+        children.push(
+          new Paragraph({
+            heading: HeadingLevel.HEADING_3,
+            children: [
+              new TextRun({
+                text: text,
+                bold: true,
+                size: 26,
+              }),
+            ],
+          }),
+        )
+        break
+
+      case "p":
+        const runs = []
+
+        // Check for formatting
+        if (element.querySelector("strong, b")) {
+          runs.push(
+            new TextRun({
+              text: text,
+              bold: true,
+              size: 24,
+            }),
+          )
+        } else if (element.querySelector("em, i")) {
+          runs.push(
+            new TextRun({
+              text: text,
+              italics: true,
+              size: 24,
+            }),
+          )
+        } else {
+          runs.push(
+            new TextRun({
+              text: text,
+              size: 24,
+            }),
+          )
+        }
+
+        children.push(
+          new Paragraph({
+            children: runs,
+          }),
+        )
+        break
+
+      case "ul":
+      case "ol":
+        const listItems = element.querySelectorAll("li")
+        listItems.forEach((item, index) => {
+          const prefix = tagName === "ul" ? "• " : `${index + 1}. `
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: prefix + (item.textContent || ""),
+                  size: 24,
+                }),
+              ],
+              indent: {
+                left: 720, // 0.5 inches in twips
+              },
+            }),
+          )
+        })
+        break
+
+      case "blockquote":
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: text,
+                italics: true,
+                size: 24,
+              }),
+            ],
+            indent: {
+              left: 720, // 0.5 inches in twips
+            },
+            border: {
+              left: {
+                color: "999999",
+                size: 6,
+                style: "single",
+              },
+            },
+          }),
+        )
+        break
+
+      default:
+        // Handle other elements as plain text
+        if (text.trim()) {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: text,
+                  size: 24,
+                }),
+              ],
+            }),
+          )
+        }
+    }
+  })
 
   // Create document
   const doc = new Document({
     sections: [
       {
         properties: {},
-        children: [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: title,
-                bold: true,
-                size: 28,
-              }),
-            ],
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: textContent,
-                size: 24,
-              }),
-            ],
-          }),
-        ],
+        children: children,
       },
     ],
   })
