@@ -155,8 +155,17 @@ export async function processOutput(fileAttachments: FileAttachment[], outputTyp
   }
 }
 
+// Helper function to strip HTML tags for plain text
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>?/gm, "")
+}
+
 export async function generatePDF(content: string, title: string) {
   const doc = new jsPDF()
+
+  // Check if content is HTML (from the editor)
+  const isHtml = content.includes("<") && content.includes(">")
+  const textContent = isHtml ? stripHtml(content) : content
 
   // Add title
   doc.setFontSize(16)
@@ -164,7 +173,7 @@ export async function generatePDF(content: string, title: string) {
 
   // Add content with word wrapping
   doc.setFontSize(12)
-  const splitText = doc.splitTextToSize(content, 170)
+  const splitText = doc.splitTextToSize(textContent, 170)
   doc.text(splitText, 20, 30)
 
   // Return base64 encoded PDF
@@ -172,6 +181,10 @@ export async function generatePDF(content: string, title: string) {
 }
 
 export async function generateDOCX(content: string, title: string) {
+  // Check if content is HTML (from the editor)
+  const isHtml = content.includes("<") && content.includes(">")
+  const textContent = isHtml ? stripHtml(content) : content
+
   // Create document
   const doc = new Document({
     sections: [
@@ -190,7 +203,7 @@ export async function generateDOCX(content: string, title: string) {
           new Paragraph({
             children: [
               new TextRun({
-                text: content,
+                text: textContent,
                 size: 24,
               }),
             ],

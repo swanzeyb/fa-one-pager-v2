@@ -8,6 +8,7 @@ import { generatePDF, generateDOCX, type OutputType, type FileAttachment } from 
 import { useImageUpload } from "./image-upload-context"
 import { Spinner } from "./spinner"
 import { useToast } from "@/hooks/use-toast"
+import { useOutput } from "./output/output-context"
 
 interface OutputActionsProps {
   content: string
@@ -20,10 +21,13 @@ interface OutputActionsProps {
 export function OutputActions({ content, title, outputType, fileAttachments, disabled = false }: OutputActionsProps) {
   const { getAllImages } = useImageUpload()
   const { toast } = useToast()
+  const { getOutputContent } = useOutput()
   const [isGenerating, setIsGenerating] = useState(false)
 
   const handleDownload = async (format: "pdf" | "docx") => {
-    if (!content) return
+    // Get the potentially edited content
+    const currentContent = getOutputContent(outputType)
+    if (!currentContent) return
 
     setIsGenerating(true)
     try {
@@ -32,10 +36,10 @@ export function OutputActions({ content, title, outputType, fileAttachments, dis
       const images = getAllImages()
 
       if (format === "pdf") {
-        dataUri = await generatePDF(content, title)
+        dataUri = await generatePDF(currentContent, title)
         filename = `${title.toLowerCase().replace(/\s+/g, "-")}.pdf`
       } else {
-        dataUri = await generateDOCX(content, title)
+        dataUri = await generateDOCX(currentContent, title)
         filename = `${title.toLowerCase().replace(/\s+/g, "-")}.docx`
       }
 
@@ -84,7 +88,7 @@ export function OutputActions({ content, title, outputType, fileAttachments, dis
           ) : (
             <>
               <Download className="h-4 w-4 mr-1" />
-              Generating...
+              Download
             </>
           )}
         </Button>
