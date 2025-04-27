@@ -1,6 +1,6 @@
 /** @type {import('jest').Config} */
 const config = {
-  testEnvironment: 'node', // Puppeteer needs Node environment
+  preset: 'jest-puppeteer',
   transform: {
     '^.+\\.(t|j)sx?$': ['@swc/jest'],
   },

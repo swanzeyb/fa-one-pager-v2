@@ -1,4 +1,4 @@
-import puppeteer, { Browser, ElementHandle, Page } from 'puppeteer'
+import { ElementHandle } from 'puppeteer' // Import Page type
 import path from 'path'
 
 // Assuming your app runs on localhost:3000
@@ -7,21 +7,18 @@ const APP_URL = 'http://localhost:3000'
 const DUMMY_FILE_PATH = path.resolve(__dirname, 'test-file.txt') // Create this file
 
 describe('Content Generation & Viewing', () => {
-  let browser: Browser
-  let page: Page
+  // Remove browser and page variables, beforeAll, afterAll
 
-  beforeAll(async () => {
-    browser = await puppeteer.launch() // Add { headless: false, slowMo: 50 } for debugging
-    page = await browser.newPage()
-    // Create the dummy file if it doesn't exist
+  // Create dummy file once before all tests in this suite if needed
+  // This could also be moved to global setup if shared across suites
+  beforeAll(() => {
     const fs = require('fs')
     if (!fs.existsSync(DUMMY_FILE_PATH)) {
       fs.writeFileSync(DUMMY_FILE_PATH, 'This is a test file.')
     }
   })
 
-  afterAll(async () => {
-    await browser.close()
+  afterAll(() => {
     // Clean up the dummy file
     const fs = require('fs')
     if (fs.existsSync(DUMMY_FILE_PATH)) {
@@ -30,6 +27,7 @@ describe('Content Generation & Viewing', () => {
   })
 
   beforeEach(async () => {
+    // Use the global page object provided by the environment
     await page.goto(APP_URL, { waitUntil: 'networkidle0' })
   })
 
@@ -47,8 +45,9 @@ describe('Content Generation & Viewing', () => {
     // Wait for the selector and cast the result
     const fileInput = (await page.waitForSelector(
       fileInputSelector
-    )) as ElementHandle<HTMLInputElement> | null
+    )) as unknown as ElementHandle<HTMLInputElement> | null // Cast to unknown first
 
+    // ... rest of the test using page ...
     if (!fileInput) {
       throw new Error('File input #file-upload not found')
     }
@@ -92,7 +91,7 @@ describe('Content Generation & Viewing', () => {
     const fileInputSelector = '#file-upload'
     const fileInput = (await page.waitForSelector(
       fileInputSelector
-    )) as ElementHandle<HTMLInputElement> | null
+    )) as unknown as ElementHandle<HTMLInputElement> | null // Cast to unknown first
     if (!fileInput) throw new Error('File input #file-upload not found')
     await fileInput.uploadFile(DUMMY_FILE_PATH)
 
@@ -151,7 +150,7 @@ describe('Content Generation & Viewing', () => {
     const fileInputSelector = '#file-upload'
     const fileInput = (await page.waitForSelector(
       fileInputSelector
-    )) as ElementHandle<HTMLInputElement> | null
+    )) as unknown as ElementHandle<HTMLInputElement> | null // Cast to unknown first
     if (!fileInput) throw new Error('File input #file-upload not found')
     await fileInput.uploadFile(DUMMY_FILE_PATH)
 
@@ -214,7 +213,7 @@ describe('Content Generation & Viewing', () => {
       const fileInputSelector = '#file-upload'
       const fileInput = (await page.waitForSelector(
         fileInputSelector
-      )) as ElementHandle<HTMLInputElement> | null
+      )) as unknown as ElementHandle<HTMLInputElement> | null // Cast to unknown first
       if (!fileInput) throw new Error('File input #file-upload not found')
 
       // Upload the file expected to fail
@@ -223,7 +222,9 @@ describe('Content Generation & Viewing', () => {
       // Wait for the Generate button to appear in the active tab panel
       const generateButtonSelector =
         '[role="tabpanel"][data-state="active"] button:has-text("Generate")'
-      await page.waitForSelector(generateButtonSelector, { timeout: 10000 })
+      await page.waitForSelector(generateButtonSelector, {
+        timeout: 10000,
+      })
 
       // Click the generate button within the active panel
       await page.click(generateButtonSelector)
