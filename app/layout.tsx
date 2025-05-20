@@ -2,7 +2,7 @@ import type React from "react"
 import "./globals.css"
 import "./markdown.css"
 import { Inter } from "next/font/google"
-import { ThemeProvider } from "@/components/theme-provider"
+import { PHProvider } from "@/lib/posthog"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -14,7 +14,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        {children}
+        <PHProvider>{children}</PHProvider>
       </body>
     </html>
   )

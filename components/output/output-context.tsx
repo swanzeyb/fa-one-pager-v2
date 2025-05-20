@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { processOutput, type OutputType, type FileAttachment } from "@/app/actions"
+import { analytics } from "@/lib/posthog"
 
 interface OutputState {
   outputs: Record<OutputType, string>
@@ -14,7 +15,12 @@ interface OutputState {
 
 interface OutputContextType extends OutputState {
   setActiveTab: (tab: OutputType) => void
-  processOutputType: (outputType: OutputType, fileAttachments: FileAttachment[]) => Promise<void>
+  processOutputType: (
+    outputType: OutputType,
+    fileAttachments: FileAttachment[],
+    isRegeneration?: boolean,
+  ) => Promise<void>
+  processMultipleOutputs: (fileAttachments: FileAttachment[]) => Promise<void>
   updateEditedOutput: (outputType: OutputType, content: string) => void
   getOutputContent: (outputType: OutputType) => string
 }
@@ -60,6 +66,8 @@ export function OutputProvider({ children }: OutputProviderProps) {
   })
 
   const setActiveTab = useCallback((tab: OutputType) => {
+    // Track tab change in PostHog
+    analytics.trackOutputGeneration(tab, false)
     setState((prev) => ({ ...prev, activeTab: tab }))
   }, [])
 
@@ -79,8 +87,9 @@ export function OutputProvider({ children }: OutputProviderProps) {
   )
 
   const processOutputType = useCallback(
-    async (outputType: OutputType, fileAttachments: FileAttachment[]) => {
+    async (outputType: OutputType, fileAttachments: FileAttachment[], isRegeneration = false) => {
       if (fileAttachments.length === 0) {
+        analytics.trackError("no_files", "No files selected for processing")
         toast({
           title: "No files selected",
           description: "Please upload at least one file to process",
@@ -90,6 +99,9 @@ export function OutputProvider({ children }: OutputProviderProps) {
         return
       }
 
+      // Track generation/regeneration in PostHog
+      analytics.trackOutputGeneration(outputType, isRegeneration)
+
       // Clear any previous errors
       setState((prev) => ({
         ...prev,
@@ -98,7 +110,7 @@ export function OutputProvider({ children }: OutputProviderProps) {
       }))
 
       try {
-        const result = await processOutput(fileAttachments, outputType)
+        const result = await processOutput(fileAttachments, outputType, isRegeneration)
         setState((prev) => ({
           ...prev,
           outputs: { ...prev.outputs, [outputType]: result },
@@ -107,8 +119,8 @@ export function OutputProvider({ children }: OutputProviderProps) {
         }))
 
         toast({
-          title: "Processing complete",
-          description: `${getOutputTypeTitle(outputType)} has been generated successfully`,
+          title: isRegeneration ? "Regeneration complete" : "Processing complete",
+          description: `${getOutputTypeTitle(outputType)} has been ${isRegeneration ? "regenerated" : "generated"} successfully`,
           type: "success",
           duration: 3000,
         })
@@ -119,12 +131,110 @@ export function OutputProvider({ children }: OutputProviderProps) {
         const errorMessage =
           error instanceof Error
             ? error.message
-            : `Failed to generate ${getOutputTypeTitle(outputType)}. Please try again.`
+            : `Failed to ${isRegeneration ? "regenerate" : "generate"} ${getOutputTypeTitle(outputType)}. Please try again.`
+
+        // Track error in PostHog
+        analytics.trackError(
+          isRegeneration ? "regeneration_failed" : "generation_failed",
+          `${outputType}: ${errorMessage}`,
+        )
 
         setState((prev) => ({
           ...prev,
           errors: { ...prev.errors, [outputType]: errorMessage },
           isProcessing: { ...prev.isProcessing, [outputType]: false },
+        }))
+
+        toast({
+          title: "Processing failed",
+          description: errorMessage,
+          type: "error",
+          duration: 7000,
+        })
+      }
+    },
+    [toast],
+  )
+
+  const processMultipleOutputs = useCallback(
+    async (fileAttachments: FileAttachment[]) => {
+      if (fileAttachments.length === 0) {
+        analytics.trackError("no_files", "No files selected for processing")
+        toast({
+          title: "No files selected",
+          description: "Please upload at least one file to process",
+          type: "warning",
+          duration: 3000,
+        })
+        return
+      }
+
+      // Track generation in PostHog
+      analytics.trackOutputGeneration("multiple", false)
+
+      // Clear any previous errors and set processing state
+      setState((prev) => ({
+        ...prev,
+        errors: {
+          shortSummary: null,
+          mediumSummary: null,
+          howToGuide: null,
+        },
+        isProcessing: {
+          shortSummary: false,
+          mediumSummary: true,
+          howToGuide: true,
+        },
+      }))
+
+      try {
+        // Process medium summary
+        const mediumResult = await processOutput(fileAttachments, "mediumSummary", false)
+
+        setState((prev) => ({
+          ...prev,
+          outputs: { ...prev.outputs, mediumSummary: mediumResult },
+          editedOutputs: { ...prev.editedOutputs, mediumSummary: "" },
+          isProcessing: { ...prev.isProcessing, mediumSummary: false },
+        }))
+
+        // Process how-to guide
+        const howToResult = await processOutput(fileAttachments, "howToGuide", false)
+
+        setState((prev) => ({
+          ...prev,
+          outputs: { ...prev.outputs, howToGuide: howToResult },
+          editedOutputs: { ...prev.editedOutputs, howToGuide: "" },
+          isProcessing: { ...prev.isProcessing, howToGuide: false },
+        }))
+
+        toast({
+          title: "Processing complete",
+          description: "All outputs have been generated successfully",
+          type: "success",
+          duration: 3000,
+        })
+      } catch (error) {
+        console.error(`Error processing outputs:`, error)
+
+        // Set the error message
+        const errorMessage = error instanceof Error ? error.message : "Failed to generate outputs. Please try again."
+
+        // Track error in PostHog
+        analytics.trackError("generation_failed", errorMessage)
+
+        setState((prev) => ({
+          ...prev,
+          errors: {
+            ...prev.errors,
+            mediumSummary: errorMessage,
+            howToGuide: errorMessage,
+          },
+          isProcessing: {
+            ...prev.isProcessing,
+            mediumSummary: false,
+            howToGuide: false,
+          },
         }))
 
         toast({
@@ -144,6 +254,7 @@ export function OutputProvider({ children }: OutputProviderProps) {
         ...state,
         setActiveTab,
         processOutputType,
+        processMultipleOutputs,
         updateEditedOutput,
         getOutputContent,
       }}

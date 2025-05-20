@@ -3,9 +3,10 @@
 import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
-import { Upload, RefreshCw } from "lucide-react"
+import { Upload, RefreshCw, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useImageUpload } from "./image-upload-context"
+import { useFeatureFlag, FEATURE_FLAGS } from "@/lib/posthog"
 
 interface ImageUploadProps {
   alt: string
@@ -18,6 +19,9 @@ export function ImageUpload({ alt, src, className = "" }: ImageUploadProps) {
   const [image, setImage] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Check if image upload feature is enabled
+  const isImageUploadEnabled = useFeatureFlag(FEATURE_FLAGS.IMAGE_UPLOAD)
 
   // Create a safe key from the alt text
   const imageKey = `img-${alt.replace(/\s+/g, "-").toLowerCase()}`
@@ -34,6 +38,8 @@ export function ImageUpload({ alt, src, className = "" }: ImageUploadProps) {
   }, [src, alt, addImage, getImage, imageKey])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isImageUploadEnabled) return
+
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -52,9 +58,33 @@ export function ImageUpload({ alt, src, className = "" }: ImageUploadProps) {
   }
 
   const triggerFileInput = () => {
+    if (!isImageUploadEnabled) return
+
     if (fileInputRef.current) {
       fileInputRef.current.click()
     }
+  }
+
+  // If image upload is disabled but we have an existing image, just show it
+  if (!isImageUploadEnabled && image) {
+    return (
+      <div className="my-4">
+        <img src={image || "/placeholder.svg"} alt={alt} className={`max-w-full h-auto rounded-md ${className}`} />
+      </div>
+    )
+  }
+
+  // If image upload is disabled and we don't have an image, show placeholder with lock icon
+  if (!isImageUploadEnabled) {
+    return (
+      <div className="my-4">
+        <div className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center bg-gray-50">
+          <Lock className="h-8 w-8 text-gray-400 mb-2" />
+          <p className="text-sm text-gray-500 text-center mb-1">Image uploads coming soon</p>
+          <p className="text-xs text-gray-400 text-center">{alt}</p>
+        </div>
+      </div>
+    )
   }
 
   return (

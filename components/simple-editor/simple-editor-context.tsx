@@ -15,7 +15,6 @@ interface SimpleEditorContextType {
   updateContent: (newContent: string) => void
   formatText: (command: string, value?: string) => void
   handleContentChange: () => void
-  convertMarkdownToHtml: (markdown: string) => string
 }
 
 const SimpleEditorContext = createContext<SimpleEditorContextType | undefined>(undefined)
@@ -50,28 +49,13 @@ export function SimpleEditorProvider({
   const editorRef = forwardedRef || internalEditorRef
   const { getAllImages } = useImageUpload()
 
-  const convertMarkdownToHtml = (markdown: string): string => {
-    // Convert markdown to HTML
-    return markdown
-      .replace(/^# (.*$)/gm, "<h1>$1</h1>")
-      .replace(/^## (.*$)/gm, "<h2>$1</h2>")
-      .replace(/^### (.*$)/gm, "<h3>$1</h3>")
-      .replace(/\*\*(.*)\*\*/gm, "<strong>$1</strong>")
-      .replace(/\*(.*)\*/gm, "<em>$1</em>")
-      .replace(/!\[(.*?)\]$$(.*?)$$/gm, '<img src="$2" alt="$1" />')
-      .replace(/\[(.*?)\]$$(.*?)$$/gm, '<a href="$2">$1</a>')
-      .replace(/^(\d+\. )/gm, "<ol><li>")
-      .replace(/^(- )/gm, "<ul><li>")
-      .replace(/\n\n/gm, "<br /><br />")
-  }
-
   // Initialize content when component mounts or content changes
   useEffect(() => {
-    const convertedHtml = convertMarkdownToHtml(initialContent)
+    // The content is already HTML, so we can use it directly
+    let processedHtml = initialContent
 
-    // Replace placeholder images with actual images
+    // Replace placeholder images with actual images if needed
     const images = getAllImages()
-    let processedHtml = convertedHtml
     Object.entries(images).forEach(([key, dataUrl]) => {
       const imgKey = key.replace("img-", "")
       const regex = new RegExp(`/placeholder\\.svg\\?.*?query=${imgKey}.*?`, "g")
@@ -123,6 +107,41 @@ export function SimpleEditorProvider({
 
   const formatText = (command: string, value?: string) => {
     if (readOnly) return
+
+    // Special handling for certain commands
+    if (command === "formatBlock" && value === "h2") {
+      // First check if we're already in an h1 or h2
+      const selection = window.getSelection()
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0)
+        const parentElement = range.commonAncestorContainer.parentElement
+
+        // If we're in an h1 or h2, we need to handle this differently
+        if (parentElement && (parentElement.tagName === "H1" || parentElement.tagName === "H2")) {
+          // Create a new paragraph after the heading
+          const newParagraph = document.createElement("p")
+          newParagraph.innerHTML = "<br>"
+
+          // Insert it after the heading
+          if (parentElement.nextSibling) {
+            parentElement.parentNode?.insertBefore(newParagraph, parentElement.nextSibling)
+          } else {
+            parentElement.parentNode?.appendChild(newParagraph)
+          }
+
+          // Move cursor to the new paragraph
+          range.selectNodeContents(newParagraph)
+          range.collapse(true)
+          selection.removeAllRanges()
+          selection.addRange(range)
+
+          handleContentChange()
+          return
+        }
+      }
+    }
+
+    // Default behavior for other commands
     document.execCommand(command, false, value)
     handleContentChange()
   }
@@ -136,7 +155,6 @@ export function SimpleEditorProvider({
     updateContent,
     formatText,
     handleContentChange,
-    convertMarkdownToHtml,
   }
 
   return <SimpleEditorContext.Provider value={value}>{children}</SimpleEditorContext.Provider>

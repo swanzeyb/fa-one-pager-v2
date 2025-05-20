@@ -1,8 +1,9 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Bold, Italic, List, Heading, Link } from "lucide-react"
+import { Bold, Italic, List, Heading, Link, ImageIcon } from "lucide-react"
 import { useSimpleEditor } from "./simple-editor-context"
+import { useFeatureFlag, FEATURE_FLAGS } from "@/lib/posthog"
 
 interface ToolbarProps {
   className?: string
@@ -10,6 +11,7 @@ interface ToolbarProps {
 
 export function Toolbar({ className = "" }: ToolbarProps) {
   const { formatText, isReadOnly } = useSimpleEditor()
+  const isImageUploadEnabled = useFeatureFlag(FEATURE_FLAGS.IMAGE_UPLOAD)
 
   if (isReadOnly) return null
 
@@ -51,6 +53,22 @@ export function Toolbar({ className = "" }: ToolbarProps) {
       >
         <Link className="h-4 w-4" />
       </Button>
+
+      {/* Only show image button if feature is enabled */}
+      {isImageUploadEnabled && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            // Image insertion logic would go here
+            alert("Image insertion coming soon!")
+          }}
+          className="p-1 h-8 w-8"
+        >
+          <ImageIcon className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   )
 }

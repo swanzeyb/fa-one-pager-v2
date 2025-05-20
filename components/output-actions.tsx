@@ -9,7 +9,7 @@ import { useImageUpload } from "./image-upload-context"
 import { Spinner } from "./spinner"
 import { useToast } from "@/hooks/use-toast"
 import { useOutput } from "./output/output-context"
-import { parseHtmlToStructure, structureToHtml } from "@/utils/html-parser"
+import { analytics } from "@/lib/posthog"
 
 interface OutputActionsProps {
   content: string
@@ -30,26 +30,20 @@ export function OutputActions({ content, title, outputType, fileAttachments, dis
     const currentContent = content || getOutputContent(outputType)
     if (!currentContent) return
 
+    // Track download in PostHog
+    analytics.trackDownload(outputType, format)
+
     setIsGenerating(true)
     try {
-      // Parse the HTML content into a structured format
-      const structuredContent = parseHtmlToStructure(currentContent)
-      console.log("Structured content:", structuredContent)
-
-      // Convert back to HTML for the server action
-      // In a real implementation, you would send the structured content directly
-      // and handle the conversion on the server
-      const processedHtml = structureToHtml(structuredContent)
-
       let dataUri: string
       let filename: string
       const images = getAllImages()
 
       if (format === "pdf") {
-        dataUri = await generatePDF(processedHtml, title)
+        dataUri = await generatePDF(currentContent, title)
         filename = `${title.toLowerCase().replace(/\s+/g, "-")}.pdf`
       } else {
-        dataUri = await generateDOCX(processedHtml, title)
+        dataUri = await generateDOCX(currentContent, title)
         filename = `${title.toLowerCase().replace(/\s+/g, "-")}.docx`
       }
 
@@ -69,10 +63,16 @@ export function OutputActions({ content, title, outputType, fileAttachments, dis
       })
     } catch (error) {
       console.error(`Error generating ${format}:`, error)
+
+      const errorMessage =
+        error instanceof Error ? error.message : `Failed to generate ${format.toUpperCase()} file. Please try again.`
+
+      // Track error in PostHog
+      analytics.trackError(`download_${format}_failed`, errorMessage)
+
       toast({
         title: "Download failed",
-        description:
-          error instanceof Error ? error.message : `Failed to generate ${format.toUpperCase()} file. Please try again.`,
+        description: errorMessage,
         type: "error",
         duration: 7000, // Longer duration for error messages
       })

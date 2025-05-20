@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
 import { useToast } from "@/hooks/use-toast"
 import type { FileAttachment } from "@/app/actions"
+import { analytics } from "@/lib/posthog"
 
 interface FileUploadContextType {
   files: File[]
@@ -48,6 +49,9 @@ export function FileUploadProvider({ children }: FileUploadProviderProps) {
     async (newFiles: File[]) => {
       setFiles((prev) => [...prev, ...newFiles])
 
+      // Track file upload in PostHog
+      analytics.trackFileUpload(newFiles.length)
+
       try {
         // Convert new files to attachments
         const newAttachments = await Promise.all(
@@ -61,9 +65,14 @@ export function FileUploadProvider({ children }: FileUploadProviderProps) {
         // Update file attachments
         setFileAttachments((prev) => [...prev, ...newAttachments])
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Failed to prepare files for processing"
+
+        // Track error in PostHog
+        analytics.trackError("file_processing", errorMessage)
+
         toast({
           title: "Error preparing files",
-          description: error instanceof Error ? error.message : "Failed to prepare files for processing",
+          description: errorMessage,
           type: "error",
           duration: 5000,
         })
@@ -94,9 +103,14 @@ export function FileUploadProvider({ children }: FileUploadProviderProps) {
       setFileAttachments(attachments)
       return attachments
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to prepare files for processing"
+
+      // Track error in PostHog
+      analytics.trackError("file_preparation", errorMessage)
+
       toast({
         title: "Error preparing files",
-        description: error instanceof Error ? error.message : "Failed to prepare files for processing",
+        description: errorMessage,
         type: "error",
         duration: 5000,
       })

@@ -76,7 +76,7 @@ export function FileList() {
   return (
     <>
       <h3 className="text-sm font-medium mb-2">Uploaded Files</h3>
-      <ScrollArea className="flex-grow mb-4">
+      <ScrollArea className="flex-grow mb-8">
         {files.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">No files uploaded yet</p>
         ) : (
