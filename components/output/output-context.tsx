@@ -11,6 +11,7 @@ interface OutputState {
   isProcessing: Record<OutputType, boolean>
   errors: Record<OutputType, string | null>
   activeTab: OutputType
+  retryCount: Record<OutputType, number>
 }
 
 interface OutputContextType extends OutputState {
@@ -63,6 +64,11 @@ export function OutputProvider({ children }: OutputProviderProps) {
       howToGuide: null,
     },
     activeTab: "shortSummary",
+    retryCount: {
+      shortSummary: 0,
+      mediumSummary: 0,
+      howToGuide: 0,
+    },
   })
 
   const setActiveTab = useCallback((tab: OutputType) => {
@@ -110,12 +116,15 @@ export function OutputProvider({ children }: OutputProviderProps) {
       }))
 
       try {
+        // The processOutput function now has built-in retry logic
         const result = await processOutput(fileAttachments, outputType, isRegeneration)
+
         setState((prev) => ({
           ...prev,
           outputs: { ...prev.outputs, [outputType]: result },
           editedOutputs: { ...prev.editedOutputs, [outputType]: "" }, // Clear edited content
           isProcessing: { ...prev.isProcessing, [outputType]: false },
+          retryCount: { ...prev.retryCount, [outputType]: 0 }, // Reset retry count on success
         }))
 
         toast({
@@ -187,37 +196,89 @@ export function OutputProvider({ children }: OutputProviderProps) {
         },
       }))
 
+      let mediumSuccess = false
+      let howToSuccess = false
+
       try {
         // Process medium summary
-        const mediumResult = await processOutput(fileAttachments, "mediumSummary", false)
+        try {
+          const mediumResult = await processOutput(fileAttachments, "mediumSummary", false)
 
-        setState((prev) => ({
-          ...prev,
-          outputs: { ...prev.outputs, mediumSummary: mediumResult },
-          editedOutputs: { ...prev.editedOutputs, mediumSummary: "" },
-          isProcessing: { ...prev.isProcessing, mediumSummary: false },
-        }))
+          setState((prev) => ({
+            ...prev,
+            outputs: { ...prev.outputs, mediumSummary: mediumResult },
+            editedOutputs: { ...prev.editedOutputs, mediumSummary: "" },
+            isProcessing: { ...prev.isProcessing, mediumSummary: false },
+            retryCount: { ...prev.retryCount, mediumSummary: 0 }, // Reset retry count on success
+          }))
+
+          mediumSuccess = true
+        } catch (mediumError) {
+          console.error("Error processing medium summary:", mediumError)
+
+          setState((prev) => ({
+            ...prev,
+            errors: {
+              ...prev.errors,
+              mediumSummary: mediumError instanceof Error ? mediumError.message : "Failed to generate medium summary",
+            },
+            isProcessing: { ...prev.isProcessing, mediumSummary: false },
+          }))
+        }
 
         // Process how-to guide
-        const howToResult = await processOutput(fileAttachments, "howToGuide", false)
+        try {
+          const howToResult = await processOutput(fileAttachments, "howToGuide", false)
 
-        setState((prev) => ({
-          ...prev,
-          outputs: { ...prev.outputs, howToGuide: howToResult },
-          editedOutputs: { ...prev.editedOutputs, howToGuide: "" },
-          isProcessing: { ...prev.isProcessing, howToGuide: false },
-        }))
+          setState((prev) => ({
+            ...prev,
+            outputs: { ...prev.outputs, howToGuide: howToResult },
+            editedOutputs: { ...prev.editedOutputs, howToGuide: "" },
+            isProcessing: { ...prev.isProcessing, howToGuide: false },
+            retryCount: { ...prev.retryCount, howToGuide: 0 }, // Reset retry count on success
+          }))
 
-        toast({
-          title: "Processing complete",
-          description: "All outputs have been generated successfully",
-          type: "success",
-          duration: 3000,
-        })
+          howToSuccess = true
+        } catch (howToError) {
+          console.error("Error processing how-to guide:", howToError)
+
+          setState((prev) => ({
+            ...prev,
+            errors: {
+              ...prev.errors,
+              howToGuide: howToError instanceof Error ? howToError.message : "Failed to generate how-to guide",
+            },
+            isProcessing: { ...prev.isProcessing, howToGuide: false },
+          }))
+        }
+
+        // Show appropriate toast based on results
+        if (mediumSuccess && howToSuccess) {
+          toast({
+            title: "Processing complete",
+            description: "All outputs have been generated successfully",
+            type: "success",
+            duration: 3000,
+          })
+        } else if (mediumSuccess || howToSuccess) {
+          toast({
+            title: "Partial success",
+            description: "Some outputs were generated successfully, but others failed. See error messages for details.",
+            type: "warning",
+            duration: 5000,
+          })
+        } else {
+          toast({
+            title: "Processing failed",
+            description: "Failed to generate any outputs. Please try again.",
+            type: "error",
+            duration: 7000,
+          })
+        }
       } catch (error) {
         console.error(`Error processing outputs:`, error)
 
-        // Set the error message
+        // This catch block handles any unexpected errors not caught by the inner try/catch blocks
         const errorMessage = error instanceof Error ? error.message : "Failed to generate outputs. Please try again."
 
         // Track error in PostHog
@@ -225,11 +286,6 @@ export function OutputProvider({ children }: OutputProviderProps) {
 
         setState((prev) => ({
           ...prev,
-          errors: {
-            ...prev.errors,
-            mediumSummary: errorMessage,
-            howToGuide: errorMessage,
-          },
           isProcessing: {
             ...prev.isProcessing,
             mediumSummary: false,

@@ -3,7 +3,7 @@
 import { generateObject } from "ai"
 import { google } from "@ai-sdk/google"
 import { jsPDF } from "jspdf"
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx"
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak } from "docx"
 import prompts from "./prompts.json"
 import { z } from "zod"
 
@@ -108,6 +108,7 @@ function convertToHtml(outputType: OutputType, data: any): string {
   }
 }
 
+// Function to process output with retry logic
 export async function processOutput(fileAttachments: FileAttachment[], outputType: OutputType, isRegeneration = false) {
   // Create file parts for each attachment
   const fileParts = fileAttachments.map((file) => ({
@@ -116,44 +117,84 @@ export async function processOutput(fileAttachments: FileAttachment[], outputTyp
     mimeType: file.contentType,
   }))
 
-  // Create messages array for the specified output type
-  const messages = [
-    {
-      role: "system" as const,
-      content:
-        prompts[outputType].system +
-        (isRegeneration
-          ? " For this regeneration, provide a fresh perspective with different wording and structure than previous versions."
-          : ""),
-    },
-    {
-      role: "user" as const,
-      content: [
+  // Maximum number of retry attempts
+  const MAX_RETRIES = 3
+  let retryCount = 0
+  let lastError = null
+
+  // Retry loop
+  while (retryCount < MAX_RETRIES) {
+    try {
+      // Slightly increase temperature with each retry to get different results
+      const temperatureAdjustment = retryCount * 0.1
+      const baseTemperature = isRegeneration ? 0.7 : 0.3
+      const adjustedTemperature = Math.min(baseTemperature + temperatureAdjustment, 0.9)
+
+      // Create model with adjusted temperature
+      const model = google("gemini-2.0-flash", {
+        temperature: adjustedTemperature,
+      })
+
+      // Create messages array for the specified output type
+      const messages = [
         {
-          type: "text" as const,
-          text:
-            prompts[outputType].prompt +
-            (isRegeneration ? " Please make this regeneration noticeably different from previous versions." : ""),
+          role: "system" as const,
+          content:
+            prompts[outputType].system +
+            (isRegeneration
+              ? " For this regeneration, provide a fresh perspective with different wording and structure than previous versions."
+              : "") +
+            (retryCount > 0
+              ? ` This is attempt ${retryCount + 1} after previous failures. Please ensure your response strictly follows the required format.`
+              : ""),
         },
-        ...fileParts,
-      ],
-    },
-  ]
+        {
+          role: "user" as const,
+          content: [
+            {
+              type: "text" as const,
+              text:
+                prompts[outputType].prompt +
+                (isRegeneration ? " Please make this regeneration noticeably different from previous versions." : "") +
+                (retryCount > 0 ? " Please ensure your response follows the required format exactly." : ""),
+            },
+            ...fileParts,
+          ],
+        },
+      ]
 
-  try {
-    // Use generateObject with the appropriate schema and model based on whether it's a regeneration
-    const result = await generateObject({
-      model: isRegeneration ? creativeModel : standardModel, // Use higher temperature for regeneration
-      messages,
-      schema: schemaMap[outputType],
-    })
+      // Use generateObject with the appropriate schema and model
+      const result = await generateObject({
+        model: model,
+        messages,
+        schema: schemaMap[outputType],
+      })
 
-    // Convert the structured output to HTML
-    return convertToHtml(outputType, result.object)
-  } catch (error) {
-    console.error("Error generating content:", error)
-    throw new Error(`Failed to generate ${outputType}: ${error instanceof Error ? error.message : "Unknown error"}`)
+      // Convert the structured output to HTML
+      return convertToHtml(outputType, result.object)
+    } catch (error) {
+      console.error(`Error generating content (attempt ${retryCount + 1}/${MAX_RETRIES}):`, error)
+      lastError = error
+      retryCount++
+
+      // If we've reached max retries, throw the last error
+      if (retryCount >= MAX_RETRIES) {
+        throw new Error(
+          `Failed to generate ${outputType} after ${MAX_RETRIES} attempts: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`,
+        )
+      }
+
+      // Wait a short time before retrying (exponential backoff)
+      await new Promise((resolve) => setTimeout(resolve, 1000 * retryCount))
+    }
   }
+
+  // This should never be reached due to the throw in the loop, but TypeScript needs it
+  throw new Error(
+    `Failed to generate ${outputType}: ${lastError instanceof Error ? lastError.message : "Unknown error"}`,
+  )
 }
 
 // Parse HTML content and apply styling to PDF based on HTML tags
@@ -303,32 +344,44 @@ export async function generatePDF(content: string, title: string) {
 }
 
 export async function generateDOCX(content: string, title: string) {
-  // Create document with title
-  const children = [
-    new Paragraph({
-      heading: HeadingLevel.TITLE,
-      children: [
-        new TextRun({
-          text: title,
-          bold: true,
-          size: 36,
-        }),
-      ],
-    }),
-  ]
-
   try {
     // Create a temporary DOM element to parse the HTML
     const parser = new DOMParser()
     const htmlDoc = parser.parseFromString(content, "text/html")
+
+    // Create document with sections
+    const docChildren = []
+
+    // Add title
+    docChildren.push(
+      new Paragraph({
+        heading: HeadingLevel.TITLE,
+        children: [
+          new TextRun({
+            text: title,
+            bold: true,
+            size: 36,
+          }),
+        ],
+        spacing: {
+          after: 400,
+        },
+      }),
+    )
+
+    // Process each element in the HTML body
     const elements = htmlDoc.body.childNodes
+    let skipNextPageBreak = false
 
-    // Track if we've seen the first h1 to avoid duplicating the title
-    let firstH1Processed = false
-
-    // Process each element and apply appropriate styling
     for (let i = 0; i < elements.length; i++) {
       const element = elements[i] as HTMLElement
+
+      // Handle page break divs
+      if (element.tagName?.toLowerCase() === "div" && element.style?.pageBreakBefore === "always") {
+        docChildren.push(new Paragraph({ children: [new PageBreak()] }))
+        skipNextPageBreak = true
+        continue
+      }
 
       // Skip text nodes and non-element nodes
       if (element.nodeType !== Node.ELEMENT_NODE) continue
@@ -340,16 +393,13 @@ export async function generateDOCX(content: string, title: string) {
       // Apply styling based on tag type
       switch (element.tagName.toLowerCase()) {
         case "h1":
-          // Skip the first h1 if it's similar to the title to avoid duplication
-          if (!firstH1Processed) {
-            firstH1Processed = true
-            // If the h1 content is very similar to the title, skip it
-            if (text.toLowerCase().includes(title.toLowerCase()) || title.toLowerCase().includes(text.toLowerCase())) {
-              continue
-            }
+          // Add a page break before new major sections (unless we just added one)
+          if (!skipNextPageBreak) {
+            docChildren.push(new Paragraph({ children: [new PageBreak()] }))
           }
+          skipNextPageBreak = false
 
-          children.push(
+          docChildren.push(
             new Paragraph({
               heading: HeadingLevel.HEADING_1,
               children: [
@@ -360,14 +410,15 @@ export async function generateDOCX(content: string, title: string) {
                 }),
               ],
               spacing: {
-                after: 200,
+                after: 300,
+                before: 300,
               },
             }),
           )
           break
 
         case "h2":
-          children.push(
+          docChildren.push(
             new Paragraph({
               heading: HeadingLevel.HEADING_2,
               children: [
@@ -379,13 +430,14 @@ export async function generateDOCX(content: string, title: string) {
               ],
               spacing: {
                 after: 200,
+                before: 200,
               },
             }),
           )
           break
 
         case "p":
-          children.push(
+          docChildren.push(
             new Paragraph({
               children: [
                 new TextRun({
@@ -394,7 +446,7 @@ export async function generateDOCX(content: string, title: string) {
                 }),
               ],
               spacing: {
-                after: 200,
+                after: 120,
               },
             }),
           )
@@ -410,7 +462,7 @@ export async function generateDOCX(content: string, title: string) {
             // Format based on list type
             const prefix = element.tagName.toLowerCase() === "ol" ? `${j + 1}. ` : "• "
 
-            children.push(
+            docChildren.push(
               new Paragraph({
                 children: [
                   new TextRun({
@@ -421,18 +473,28 @@ export async function generateDOCX(content: string, title: string) {
                 spacing: {
                   after: 100,
                 },
-                // Removed the left indent completely
                 indent: {
-                  left: 0,
+                  left: 720, // 0.5 inches in twips (1440 twips = 1 inch)
                 },
               }),
             )
           }
+          // Add extra space after list
+          docChildren.push(
+            new Paragraph({
+              children: [new TextRun({ text: "" })],
+              spacing: { after: 120 },
+            }),
+          )
+          break
+
+        case "li":
+          // Individual list items are handled within ol/ul processing
           break
 
         default:
           // Handle other elements as paragraphs
-          children.push(
+          docChildren.push(
             new Paragraph({
               children: [
                 new TextRun({
@@ -440,41 +502,80 @@ export async function generateDOCX(content: string, title: string) {
                   size: 24,
                 }),
               ],
+              spacing: {
+                after: 120,
+              },
             }),
           )
       }
     }
+
+    // Create document
+    const doc = new Document({
+      sections: [
+        {
+          properties: {
+            page: {
+              margin: {
+                top: 1440, // 1 inch in twips
+                right: 1440,
+                bottom: 1440,
+                left: 1440,
+              },
+            },
+          },
+          children: docChildren,
+        },
+      ],
+    })
+
+    // Generate buffer
+    const buffer = await Packer.toBuffer(doc)
+
+    // Convert buffer to base64
+    const base64 = Buffer.from(buffer).toString("base64")
+
+    // Return as data URI
+    return `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`
   } catch (error) {
     console.error("Error generating DOCX:", error)
-    // Fallback to error message
-    children.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "Error processing content. Please try again.",
-            size: 24,
-          }),
-        ],
-      }),
-    )
+
+    // Create a simple error document
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: [
+            new Paragraph({
+              heading: HeadingLevel.TITLE,
+              children: [
+                new TextRun({
+                  text: title,
+                  bold: true,
+                  size: 36,
+                }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "Error processing content. Please try again.",
+                  size: 24,
+                }),
+              ],
+            }),
+          ],
+        },
+      ],
+    })
+
+    // Generate buffer
+    const buffer = await Packer.toBuffer(doc)
+
+    // Convert buffer to base64
+    const base64 = Buffer.from(buffer).toString("base64")
+
+    // Return as data URI
+    return `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`
   }
-
-  // Create document
-  const doc = new Document({
-    sections: [
-      {
-        properties: {},
-        children: children,
-      },
-    ],
-  })
-
-  // Generate buffer
-  const buffer = await Packer.toBuffer(doc)
-
-  // Convert buffer to base64
-  const base64 = Buffer.from(buffer).toString("base64")
-
-  // Return as data URI
-  return `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`
 }

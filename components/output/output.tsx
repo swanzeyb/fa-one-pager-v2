@@ -83,16 +83,38 @@ export function OutputContent() {
       // Track download in PostHog
       analytics.trackDownload("combined", "docx")
 
-      // Combine the content
-      const combinedContent = `
-        ${outputs.mediumSummary || ""}
-        <h1>How-to Guide</h1>
-        ${outputs.howToGuide || ""}
-      `
+      // Get the current date for the document title
+      const currentDate = new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
 
-      // Generate the DOCX
-      const dataUri = await generateDOCX(combinedContent, "Combined Document")
-      const filename = "combined-document.docx"
+      // Create a properly structured combined document
+      let combinedContent = ""
+
+      // Add medium summary if available
+      if (outputs.mediumSummary) {
+        combinedContent += outputs.mediumSummary
+      }
+
+      // Add a page break and how-to guide if available
+      if (outputs.howToGuide) {
+        // Add a page break between sections
+        combinedContent += '<div style="page-break-before: always;"></div>'
+
+        // If the how-to guide doesn't start with a heading, add one
+        if (!outputs.howToGuide.includes("<h1>")) {
+          combinedContent += "<h1>How-to Guide</h1>"
+        }
+
+        combinedContent += outputs.howToGuide
+      }
+
+      // Generate the DOCX with a proper title
+      const documentTitle = `Research Summary - ${currentDate}`
+      const dataUri = await generateDOCX(combinedContent, documentTitle)
+      const filename = `research-summary-${currentDate.toLowerCase().replace(/\s+/g, "-")}.docx`
 
       // Create a link element and trigger download
       const link = document.createElement("a")
@@ -135,6 +157,17 @@ export function OutputContent() {
           <AlertCircle className="h-10 w-10 text-red-500 mb-2" />
           <h3 className="text-lg font-medium text-red-500">Error</h3>
           <p className="text-sm text-muted-foreground">{errors[outputType]}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-4"
+            onClick={async () => {
+              const attachments = await prepareFileAttachments()
+              processMultipleOutputs(attachments)
+            }}
+          >
+            Try Again
+          </Button>
         </div>
       )
     }
