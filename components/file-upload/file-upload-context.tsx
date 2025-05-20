@@ -29,6 +29,12 @@ interface FileUploadProviderProps {
   children: ReactNode
 }
 
+// Define allowed file types
+const ALLOWED_FILE_TYPES = [
+  "application/pdf", // PDF
+  "text/plain", // TXT
+]
+
 export function FileUploadProvider({ children }: FileUploadProviderProps) {
   const { toast } = useToast()
   const [files, setFiles] = useState<File[]>([])
@@ -47,15 +53,47 @@ export function FileUploadProvider({ children }: FileUploadProviderProps) {
 
   const addFiles = useCallback(
     async (newFiles: File[]) => {
-      setFiles((prev) => [...prev, ...newFiles])
+      // Filter out unsupported file types
+      const validFiles: File[] = []
+      const invalidFiles: File[] = []
+
+      newFiles.forEach((file) => {
+        if (ALLOWED_FILE_TYPES.includes(file.type)) {
+          validFiles.push(file)
+        } else {
+          invalidFiles.push(file)
+        }
+      })
+
+      // Show error for invalid files
+      if (invalidFiles.length > 0) {
+        const fileNames = invalidFiles.map((f) => f.name).join(", ")
+        const errorMessage = `Unsupported file type${invalidFiles.length > 1 ? "s" : ""}: ${fileNames}. Only PDF and TXT files are supported.`
+
+        // Track error in PostHog
+        analytics.trackError("invalid_file_type", errorMessage)
+
+        toast({
+          title: "Invalid file type",
+          description: errorMessage,
+          type: "error",
+          duration: 5000,
+        })
+      }
+
+      // If no valid files, return early
+      if (validFiles.length === 0) return
+
+      // Add valid files
+      setFiles((prev) => [...prev, ...validFiles])
 
       // Track file upload in PostHog
-      analytics.trackFileUpload(newFiles.length)
+      analytics.trackFileUpload(validFiles.length)
 
       try {
         // Convert new files to attachments
         const newAttachments = await Promise.all(
-          newFiles.map(async (file) => ({
+          validFiles.map(async (file) => ({
             name: file.name,
             contentType: file.type,
             data: await convertToDataURL(file),

@@ -5,10 +5,11 @@ import type React from "react"
 import posthog from "posthog-js"
 import { PostHogProvider } from "posthog-js/react"
 
-// Initialize PostHog only in browser environments
+// Initialize PostHog only in browser environments with a placeholder key
+// This avoids exposing sensitive environment variables in the client
 if (typeof window !== "undefined") {
-  posthog.init(process.env.NEXT_PUBLIC_POSTHOG_ID, {
-    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://app.posthog.com",
+  posthog.init("ph_placeholder_key", {
+    api_host: "https://app.posthog.com",
     // Enable capturing by default
     capture_pageview: true,
     // Add more configuration as needed
