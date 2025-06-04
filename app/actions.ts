@@ -110,12 +110,37 @@ function convertToHtml(outputType: OutputType, data: any): string {
 
 // Function to process output with retry logic
 export async function processOutput(fileAttachments: FileAttachment[], outputType: OutputType, isRegeneration = false) {
-  // Create file parts for each attachment
-  const fileParts = fileAttachments.map((file) => ({
-    type: "file" as const,
-    data: file.data,
-    mimeType: file.contentType,
-  }))
+  // Validate input
+  if (!fileAttachments || fileAttachments.length === 0) {
+    throw new Error("No file attachments provided")
+  }
+
+  // Create file parts for each attachment with error handling
+  const fileParts = []
+
+  for (let i = 0; i < fileAttachments.length; i++) {
+    const file = fileAttachments[i]
+    try {
+      // Validate file data
+      if (!file.data || !file.contentType) {
+        console.warn(`Skipping invalid file: ${file.name}`)
+        continue
+      }
+
+      fileParts.push({
+        type: "file" as const,
+        data: file.data,
+        mimeType: file.contentType,
+      })
+    } catch (fileError) {
+      console.error(`Error processing file ${file.name}:`, fileError)
+      // Continue with other files instead of failing completely
+    }
+  }
+
+  if (fileParts.length === 0) {
+    throw new Error("No valid files could be processed")
+  }
 
   // Maximum number of retry attempts
   const MAX_RETRIES = 3
@@ -146,6 +171,9 @@ export async function processOutput(fileAttachments: FileAttachment[], outputTyp
               : "") +
             (retryCount > 0
               ? ` This is attempt ${retryCount + 1} after previous failures. Please ensure your response strictly follows the required format.`
+              : "") +
+            (fileParts.length > 1
+              ? ` You are processing ${fileParts.length} files. Please synthesize information from all files.`
               : ""),
         },
         {
@@ -156,7 +184,10 @@ export async function processOutput(fileAttachments: FileAttachment[], outputTyp
               text:
                 prompts[outputType].prompt +
                 (isRegeneration ? " Please make this regeneration noticeably different from previous versions." : "") +
-                (retryCount > 0 ? " Please ensure your response follows the required format exactly." : ""),
+                (retryCount > 0 ? " Please ensure your response follows the required format exactly." : "") +
+                (fileParts.length > 1
+                  ? ` Please analyze and synthesize information from all ${fileParts.length} uploaded files.`
+                  : ""),
             },
             ...fileParts,
           ],

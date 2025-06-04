@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertCircle, Download } from "lucide-react"
+import { AlertCircle, Download, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Spinner } from "@/components/spinner"
@@ -48,7 +48,7 @@ function EditorWithActions({ outputType, title, fileAttachments, disabled = fals
 }
 
 export function OutputContent() {
-  const { outputs, errors, isProcessing, processMultipleOutputs } = useOutput()
+  const { outputs, errors, isProcessing, processMultipleOutputs, processOutputType } = useOutput()
   const { files, fileAttachments, prepareFileAttachments } = useFileUpload()
   const [editorContent, setEditorContent] = useState("")
   const [isDownloading, setIsDownloading] = useState(false)
@@ -58,6 +58,11 @@ export function OutputContent() {
   const handleGenerate = async () => {
     const attachments = await prepareFileAttachments()
     processMultipleOutputs(attachments)
+  }
+
+  const handleRegenerate = async (outputType: OutputType) => {
+    const attachments = await prepareFileAttachments()
+    processOutputType(outputType, attachments, true) // true indicates this is a regeneration
   }
 
   const handleEditorChange = (content: string, outputType: OutputType) => {
@@ -174,14 +179,30 @@ export function OutputContent() {
 
     if (outputs[outputType]) {
       return (
-        <SimpleEditor
-          content={outputs[outputType]}
-          onChange={(content) => handleEditorChange(content, outputType)}
-          ref={editorRef}
-        >
-          <Toolbar />
-          <EditorContent />
-        </SimpleEditor>
+        <div className="flex flex-col h-full">
+          <SimpleEditor
+            content={outputs[outputType]}
+            onChange={(content) => handleEditorChange(content, outputType)}
+            ref={editorRef}
+          >
+            <Toolbar />
+            <EditorContent />
+          </SimpleEditor>
+
+          {/* Add regenerate button at the bottom of the content */}
+          <div className="p-3 border-t bg-gray-50 flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleRegenerate(outputType)}
+              disabled={isProcessing[outputType]}
+              className="flex items-center gap-1"
+            >
+              {isProcessing[outputType] ? <Spinner className="h-4 w-4 mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+              Regenerate {outputType === "howToGuide" ? "How-to Guide" : "Medium Summary"}
+            </Button>
+          </div>
+        </div>
       )
     }
 
@@ -240,7 +261,7 @@ export function OutputContent() {
 
       {/* Medium Summary Section */}
       <div className="border rounded-md">
-        <div className="p-4 flex justify-between items-center border-b">
+        <div className="p-4 border-b">
           <h3 className="text-lg font-medium">Medium Summary</h3>
         </div>
         <div className="flex-grow">{renderOutputSection("mediumSummary")}</div>
@@ -248,7 +269,7 @@ export function OutputContent() {
 
       {/* How-to Guide Section */}
       <div className="border rounded-md">
-        <div className="p-4 flex justify-between items-center border-b">
+        <div className="p-4 border-b">
           <h3 className="text-lg font-medium">How-to Guide</h3>
         </div>
         <div className="flex-grow">{renderOutputSection("howToGuide")}</div>

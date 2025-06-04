@@ -1,11 +1,12 @@
 "use client"
 
 import type React from "react"
-import { Upload, X, FileText, FileType } from "lucide-react"
+import { Upload, FileText, FileType, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useFileUpload } from "./file-upload-context"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface FileUploadProps {
   children: React.ReactNode
@@ -100,18 +101,35 @@ export function FileList() {
         ) : (
           <ul className="space-y-2">
             {files.map((file, index) => (
-              <li key={index} className="flex items-center justify-between text-sm p-2 bg-muted rounded-md">
-                <div className="flex items-center truncate max-w-[80%]">
-                  {file.type === "application/pdf" ? (
-                    <FileText className="h-4 w-4 mr-2 text-red-500" />
-                  ) : (
-                    <FileType className="h-4 w-4 mr-2 text-blue-500" />
-                  )}
-                  <span className="truncate">{file.name}</span>
-                </div>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeFile(index)}>
-                  <X className="h-4 w-4" />
-                  <span className="sr-only">Remove file</span>
+              <li
+                key={index}
+                className="flex items-center justify-between text-sm p-3 bg-muted rounded-md group hover:bg-muted/80"
+              >
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center max-w-[75%]">
+                        {file.type === "application/pdf" ? (
+                          <FileText className="h-4 w-4 min-w-4 mr-2 text-red-500" />
+                        ) : (
+                          <FileType className="h-4 w-4 min-w-4 mr-2 text-blue-500" />
+                        )}
+                        <span className="truncate">{file.name}</span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[300px] break-words">
+                      {file.name}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => removeFile(index)}
+                  className="flex items-center gap-1"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Remove</span>
                 </Button>
               </li>
             ))}

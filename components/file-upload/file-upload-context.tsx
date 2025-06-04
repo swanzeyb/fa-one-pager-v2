@@ -91,17 +91,39 @@ export function FileUploadProvider({ children }: FileUploadProviderProps) {
       analytics.trackFileUpload(validFiles.length)
 
       try {
-        // Convert new files to attachments
-        const newAttachments = await Promise.all(
-          validFiles.map(async (file) => ({
-            name: file.name,
-            contentType: file.type,
-            data: await convertToDataURL(file),
-          })),
-        )
+        // Convert new files to attachments one by one to avoid memory issues
+        const newAttachments: FileAttachment[] = []
 
-        // Update file attachments
-        setFileAttachments((prev) => [...prev, ...newAttachments])
+        for (const file of validFiles) {
+          try {
+            const dataUrl = await convertToDataURL(file)
+            newAttachments.push({
+              name: file.name,
+              contentType: file.type,
+              data: dataUrl,
+            })
+          } catch (fileError) {
+            console.error(`Error processing file ${file.name}:`, fileError)
+
+            // Track individual file error
+            analytics.trackError("individual_file_processing", `Failed to process ${file.name}`)
+
+            toast({
+              title: `Error processing ${file.name}`,
+              description: "This file could not be processed and will be skipped.",
+              type: "error",
+              duration: 5000,
+            })
+
+            // Remove the failed file from the files array
+            setFiles((prev) => prev.filter((f) => f.name !== file.name))
+          }
+        }
+
+        // Update file attachments with successfully processed files
+        if (newAttachments.length > 0) {
+          setFileAttachments((prev) => [...prev, ...newAttachments])
+        }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Failed to prepare files for processing"
 
@@ -126,18 +148,46 @@ export function FileUploadProvider({ children }: FileUploadProviderProps) {
 
   const prepareFileAttachments = useCallback(async () => {
     // If we already have attachments for all files, just return them
-    if (files.length === fileAttachments.length) {
+    if (files.length === fileAttachments.length && files.length > 0) {
       return fileAttachments
     }
 
+    if (files.length === 0) {
+      return []
+    }
+
     try {
-      const attachments = await Promise.all(
-        files.map(async (file) => ({
-          name: file.name,
-          contentType: file.type,
-          data: await convertToDataURL(file),
-        })),
-      )
+      const attachments: FileAttachment[] = []
+
+      // Process files one by one to avoid memory issues and provide better error handling
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        try {
+          const dataUrl = await convertToDataURL(file)
+          attachments.push({
+            name: file.name,
+            contentType: file.type,
+            data: dataUrl,
+          })
+        } catch (fileError) {
+          console.error(`Error preparing file ${file.name}:`, fileError)
+
+          // Track individual file error
+          analytics.trackError("file_preparation_individual", `Failed to prepare ${file.name}`)
+
+          toast({
+            title: `Error preparing ${file.name}`,
+            description: "This file will be skipped from processing.",
+            type: "warning",
+            duration: 5000,
+          })
+        }
+      }
+
+      if (attachments.length === 0) {
+        throw new Error("No files could be prepared for processing")
+      }
+
       setFileAttachments(attachments)
       return attachments
     } catch (error) {
