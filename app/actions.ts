@@ -1,11 +1,10 @@
 "use server"
 
-import { generateObject } from "ai"
+import { generateText } from "ai"
 import { google } from "@ai-sdk/google"
 import { jsPDF } from "jspdf"
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak } from "docx"
 import prompts from "./prompts.json"
-import { z } from "zod"
 
 export type OutputType = "shortSummary" | "mediumSummary" | "howToGuide"
 
@@ -20,92 +19,6 @@ export type StructuredElement = {
   content: string
   attributes?: Record<string, string>
   children?: StructuredElement[]
-}
-
-// Create model instances with different temperatures
-const standardModel = google("gemini-2.0-flash", {
-  temperature: 0.3,
-})
-
-const creativeModel = google("gemini-2.0-flash", {
-  temperature: 0.7, // Higher temperature for more creative/varied outputs
-})
-
-// Define Zod schemas for each output type
-const shortSummarySchema = z.object({
-  title: z.string().describe("An engaging LinkedIn-style title that highlights the paper's main author"),
-  paragraphs: z
-    .array(z.string().describe("A paragraph of no more than 60 words in a tech-blog tone"))
-    .length(2)
-    .describe("Two paragraphs of no more than 60 words each"),
-})
-
-const mediumSummarySchema = z.object({
-  title: z.string().describe("An engaging blog-style title that highlights the paper's main author"),
-  paragraphs: z
-    .array(z.string().describe("A paragraph of no more than 60 words in a slightly instructional tone"))
-    .min(3)
-    .max(4)
-    .describe("3-4 paragraphs of no more than 60 words each"),
-})
-
-// Updated schema to remove images
-const howToGuideSchema = z.object({
-  introduction: z
-    .string()
-    .describe(
-      "A single-paragraph introduction (≤60 words) stating the problem, what Washington State University did, and how the guide helps",
-    ),
-  steps: z
-    .array(z.string().describe("A step with no more than three sentences"))
-    .min(3)
-    .max(10)
-    .describe("3-10 numbered steps, each no more than three sentences"),
-  authors: z.array(z.string()).describe("List of all authors with citations"),
-})
-
-// Define the schema map
-const schemaMap = {
-  shortSummary: shortSummarySchema,
-  mediumSummary: mediumSummarySchema,
-  howToGuide: howToGuideSchema,
-}
-
-// Define the output types
-export type ShortSummaryOutput = z.infer<typeof shortSummarySchema>
-export type MediumSummaryOutput = z.infer<typeof mediumSummarySchema>
-export type HowToGuideOutput = z.infer<typeof howToGuideSchema>
-
-// Convert structured output to HTML
-function convertToHtml(outputType: OutputType, data: any): string {
-  try {
-    switch (outputType) {
-      case "shortSummary": {
-        const output = data as ShortSummaryOutput
-        // Remove the newline between title and paragraphs
-        return `<h1>${output.title}</h1>${output.paragraphs.map((p) => `<p>${p}</p>`).join("")}`
-      }
-      case "mediumSummary": {
-        const output = data as MediumSummaryOutput
-        // Remove the newline between title and paragraphs
-        return `<h1>${output.title}</h1>${output.paragraphs.map((p) => `<p>${p}</p>`).join("")}`
-      }
-      case "howToGuide": {
-        const output = data as HowToGuideOutput
-
-        const steps = output.steps.map((step, index) => `<li>${step}</li>`).join("")
-        const authors = output.authors.map((author) => `<p>${author}</p>`).join("")
-
-        // Remove unnecessary newlines between elements
-        return `<h1>How-to Guide</h1><p>${output.introduction}</p><h2>Steps</h2><ol>${steps}</ol><h2>Authors</h2>${authors}`
-      }
-      default:
-        return "<p>Error: Unknown output type</p>"
-    }
-  } catch (error) {
-    console.error("Error converting to HTML:", error)
-    return `<h1>Error Converting Output</h1><p>There was an error converting the structured output to HTML. Raw data:</p><pre>${JSON.stringify(data, null, 2)}</pre>`
-  }
 }
 
 // Function to process output with retry logic
@@ -194,15 +107,19 @@ export async function processOutput(fileAttachments: FileAttachment[], outputTyp
         },
       ]
 
-      // Use generateObject with the appropriate schema and model
-      const result = await generateObject({
+      // Use generateText instead of generateObject for more reliable results
+      const result = await generateText({
         model: model,
         messages,
-        schema: schemaMap[outputType],
       })
 
-      // Convert the structured output to HTML
-      return convertToHtml(outputType, result.object)
+      // Validate that we got some content
+      if (!result.text || result.text.trim().length < 50) {
+        throw new Error("Generated content is too short or empty")
+      }
+
+      // Return the HTML content directly
+      return result.text
     } catch (error) {
       console.error(`Error generating content (attempt ${retryCount + 1}/${MAX_RETRIES}):`, error)
       lastError = error
