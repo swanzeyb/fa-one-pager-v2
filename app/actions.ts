@@ -20,6 +20,24 @@ export type StructuredElement = {
   children?: StructuredElement[]
 }
 
+/**
+ * Sanitizes LLM output by removing markdown code block artifacts
+ */
+function sanitizeLLMOutput(content: string): string {
+  if (!content || typeof content !== 'string') {
+    return ''
+  }
+
+  // Remove markdown code block artifacts (backticks and language specifiers)
+  let sanitized = content.replace(/```html\s*/gi, '')
+  sanitized = sanitized.replace(/```\s*/g, '')
+
+  // Remove any remaining markdown code block patterns
+  sanitized = sanitized.replace(/^```[\w]*\s*$/gm, '')
+
+  return sanitized.trim()
+}
+
 // Function to process output with retry logic
 export async function processOutput(
   fileAttachments: FileAttachment[],
@@ -129,8 +147,11 @@ export async function processOutput(
         throw new Error('Generated content is too short or empty')
       }
 
-      // Return the HTML content directly
-      return result.text
+      // Sanitize the result to remove markdown code block artifacts
+      const sanitizedContent = sanitizeLLMOutput(result.text)
+
+      // Return the sanitized HTML content
+      return sanitizedContent
     } catch (error) {
       console.error(
         `Error generating content (attempt ${retryCount + 1}/${MAX_RETRIES}):`,

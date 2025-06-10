@@ -263,6 +263,7 @@ export function useDownload() {
 
       // Create combined content
       let combinedContent = ''
+      // debugger
 
       // Add medium summary if available
       if (mediumSummary) {
