@@ -309,8 +309,14 @@ export function parseHtmlToDocumentStructure(
             break
 
           default:
-            // Handle other elements as paragraphs if they have text content
-            if (textContent) {
+            // For other elements, recursively process their children
+            // This ensures we don't lose nested structure
+            if (element.childNodes && element.childNodes.length > 0) {
+              Array.from(element.childNodes).forEach((childNode) => {
+                nodeElements.push(...processNode(childNode))
+              })
+            } else if (textContent) {
+              // Only create a paragraph if there are no children and we have text
               nodeElements.push({
                 type: 'paragraph',
                 content: textContent,
