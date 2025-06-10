@@ -1,15 +1,25 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Download } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { generatePDF, generateDOCX, type OutputType, type FileAttachment } from "@/app/actions"
-import { useImageUpload } from "./image-upload-context"
-import { Spinner } from "./spinner"
-import { useToast } from "@/hooks/use-toast"
-import { useOutput } from "./output/output-context"
-import { analytics } from "@/lib/posthog"
+import { useState } from 'react'
+import { Download } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  generatePDF,
+  generateDOCX,
+  type OutputType,
+  type FileAttachment,
+} from '@/app/actions'
+import { useImageUpload } from './image-upload-context'
+import { Spinner } from './spinner'
+import { useToast } from '@/hooks/use-toast'
+import { useOutput } from './output/output-context'
+import { analytics } from '@/lib/posthog'
 
 interface OutputActionsProps {
   content: string
@@ -19,13 +29,19 @@ interface OutputActionsProps {
   disabled?: boolean
 }
 
-export function OutputActions({ content, title, outputType, fileAttachments, disabled = false }: OutputActionsProps) {
+export function OutputActions({
+  content,
+  title,
+  outputType,
+  fileAttachments,
+  disabled = false,
+}: OutputActionsProps) {
   const { getAllImages } = useImageUpload()
   const { toast } = useToast()
   const { getOutputContent } = useOutput()
   const [isGenerating, setIsGenerating] = useState(false)
 
-  const handleDownload = async (format: "pdf" | "docx") => {
+  const handleDownload = async (format: 'pdf' | 'docx') => {
     // Use the HTML content passed directly, or fall back to the output context
     const currentContent = content || getOutputContent(outputType)
     if (!currentContent) return
@@ -34,49 +50,65 @@ export function OutputActions({ content, title, outputType, fileAttachments, dis
     analytics.trackDownload(outputType, format)
 
     setIsGenerating(true)
+    let objectUrl: string | null = null
+    let link: HTMLAnchorElement | null = null
+
     try {
       let dataUri: string
       let filename: string
       const images = getAllImages()
 
-      if (format === "pdf") {
+      if (format === 'pdf') {
         dataUri = await generatePDF(currentContent, title)
-        filename = `${title.toLowerCase().replace(/\s+/g, "-")}.pdf`
+        filename = `${title.toLowerCase().replace(/\s+/g, '-')}.pdf`
       } else {
         dataUri = await generateDOCX(currentContent, title)
-        filename = `${title.toLowerCase().replace(/\s+/g, "-")}.docx`
+        filename = `${title.toLowerCase().replace(/\s+/g, '-')}.docx`
       }
 
+      // Convert data URI to blob for better memory management
+      const response = await fetch(dataUri)
+      const blob = await response.blob()
+      objectUrl = URL.createObjectURL(blob)
+
       // Create a link element and trigger download
-      const link = document.createElement("a")
-      link.href = dataUri
+      link = document.createElement('a')
+      link.href = objectUrl
       link.download = filename
       document.body.appendChild(link)
       link.click()
-      document.body.removeChild(link)
 
       toast({
-        title: "Download started",
+        title: 'Download started',
         description: `Your ${format.toUpperCase()} file is being downloaded`,
-        type: "success",
+        type: 'success',
         duration: 3000, // Short duration for success messages
       })
     } catch (error) {
       console.error(`Error generating ${format}:`, error)
 
       const errorMessage =
-        error instanceof Error ? error.message : `Failed to generate ${format.toUpperCase()} file. Please try again.`
+        error instanceof Error
+          ? error.message
+          : `Failed to generate ${format.toUpperCase()} file. Please try again.`
 
       // Track error in PostHog
       analytics.trackError(`download_${format}_failed`, errorMessage)
 
       toast({
-        title: "Download failed",
+        title: 'Download failed',
         description: errorMessage,
-        type: "error",
+        type: 'error',
         duration: 7000, // Longer duration for error messages
       })
     } finally {
+      // Clean up resources in finally block to prevent memory leaks
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl)
+      }
+      if (link && link.parentNode) {
+        document.body.removeChild(link)
+      }
       setIsGenerating(false)
     }
   }
@@ -104,8 +136,12 @@ export function OutputActions({ content, title, outputType, fileAttachments, dis
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => handleDownload("pdf")}>Download as PDF</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleDownload("docx")}>Download as Word Document</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleDownload('pdf')}>
+          Download as PDF
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleDownload('docx')}>
+          Download as Word Document
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

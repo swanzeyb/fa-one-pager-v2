@@ -34,7 +34,6 @@ export async function processOutput(
   outputType: OutputType,
   isRegeneration = false
 ) {
-  debugger
   // Validate input
   if (!fileAttachments || fileAttachments.length === 0) {
     throw new Error('No file attachments provided')
@@ -83,10 +82,8 @@ export async function processOutput(
         0.9
       )
 
-      // Create model with adjusted temperature
-      const model = google('gemini-2.0-flash', {
-        temperature: adjustedTemperature,
-      })
+      // Create model
+      const model = google('gemini-2.0-flash')
 
       // Create messages array for the specified output type
       const messages = [
@@ -132,6 +129,7 @@ export async function processOutput(
       const result = await generateText({
         model: model,
         messages,
+        temperature: adjustedTemperature, // Temperature configuration goes here
       })
 
       // Validate that we got some content
@@ -323,7 +321,6 @@ export async function generatePDF(content: string, title: string) {
 
 export async function generateDOCX(content: string, title: string) {
   try {
-    debugger
     // Create a temporary DOM element to parse the HTML
     const parser = new DOMParser()
     const htmlDoc = parser.parseFromString(content, 'text/html')
@@ -516,7 +513,7 @@ export async function generateDOCX(content: string, title: string) {
     const buffer = await Packer.toBuffer(doc)
 
     // Convert buffer to base64
-    const base64 = Buffer.from(buffer).toString('base64')
+    const base64 = buffer.toString('base64')
 
     // Return as data URI
     return `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`
@@ -556,7 +553,7 @@ export async function generateDOCX(content: string, title: string) {
     const buffer = await Packer.toBuffer(doc)
 
     // Convert buffer to base64
-    const base64 = Buffer.from(buffer).toString('base64')
+    const base64 = buffer.toString('base64')
 
     // Return as data URI
     return `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`

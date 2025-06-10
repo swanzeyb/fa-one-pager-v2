@@ -1,19 +1,24 @@
-"use client"
+'use client'
 
-import { AlertCircle, Download, RefreshCw } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Spinner } from "@/components/spinner"
-import { OutputActions } from "@/components/output-actions"
-import { OutputProvider, useOutput } from "./output-context"
-import { useFileUpload } from "../file-upload/file-upload-context"
-import { SimpleEditor, Toolbar, EditorContent, useSimpleEditor } from "../simple-editor"
-import type { OutputType } from "@/app/actions"
-import type React from "react"
-import { useState, useRef } from "react"
-import { generateDOCX } from "@/app/actions"
-import { useToast } from "@/hooks/use-toast"
-import { analytics } from "@/lib/posthog"
+import { AlertCircle, Download, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Spinner } from '@/components/spinner'
+import { OutputActions } from '@/components/output-actions'
+import { OutputProvider, useOutput } from './output-context'
+import { useFileUpload } from '../file-upload/file-upload-context'
+import {
+  SimpleEditor,
+  Toolbar,
+  EditorContent,
+  useSimpleEditor,
+} from '../simple-editor'
+import type { OutputType, FileAttachment } from '@/app/actions'
+import type React from 'react'
+import { useState, useRef } from 'react'
+import { generateDOCX } from '@/app/actions'
+import { useToast } from '@/hooks/use-toast'
+import { analytics } from '@/lib/posthog'
 
 interface OutputProps {
   children: React.ReactNode
@@ -26,14 +31,28 @@ export function Output({ children }: OutputProps) {
         <CardHeader>
           <CardTitle>Output</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col space-y-6">{children}</CardContent>
+        <CardContent className="flex flex-col space-y-6">
+          {children}
+        </CardContent>
       </Card>
     </OutputProvider>
   )
 }
 
+interface EditorWithActionsProps {
+  outputType: OutputType
+  title: string
+  fileAttachments: FileAttachment[]
+  disabled?: boolean
+}
+
 // Create a wrapper component to access the editor context
-function EditorWithActions({ outputType, title, fileAttachments, disabled = false }) {
+function EditorWithActions({
+  outputType,
+  title,
+  fileAttachments,
+  disabled = false,
+}: EditorWithActionsProps) {
   const { htmlContent } = useSimpleEditor()
 
   return (
@@ -48,9 +67,15 @@ function EditorWithActions({ outputType, title, fileAttachments, disabled = fals
 }
 
 export function OutputContent() {
-  const { outputs, errors, isProcessing, processMultipleOutputs, processOutputType } = useOutput()
+  const {
+    outputs,
+    errors,
+    isProcessing,
+    processMultipleOutputs,
+    processOutputType,
+  } = useOutput()
   const { files, fileAttachments, prepareFileAttachments } = useFileUpload()
-  const [editorContent, setEditorContent] = useState("")
+  const [editorContent, setEditorContent] = useState('')
   const [isDownloading, setIsDownloading] = useState(false)
   const { toast } = useToast()
   const editorRef = useRef(null)
@@ -66,7 +91,7 @@ export function OutputContent() {
   }
 
   const handleEditorChange = (content: string, outputType: OutputType) => {
-    if (outputType === "mediumSummary") {
+    if (outputType === 'mediumSummary') {
       setEditorContent(content)
     }
   }
@@ -75,28 +100,31 @@ export function OutputContent() {
     // Check if we have content to download
     if (!outputs.mediumSummary && !outputs.howToGuide) {
       toast({
-        title: "No content to download",
-        description: "Please generate content first before downloading",
-        type: "warning",
+        title: 'No content to download',
+        description: 'Please generate content first before downloading',
+        type: 'warning',
         duration: 3000,
       })
       return
     }
 
     setIsDownloading(true)
+    let objectUrl: string | null = null
+    let link: HTMLAnchorElement | null = null
+
     try {
       // Track download in PostHog
-      analytics.trackDownload("combined", "docx")
+      analytics.trackDownload('combined', 'docx')
 
       // Get the current date for the document title
-      const currentDate = new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
+      const currentDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
       })
 
       // Create a properly structured combined document
-      let combinedContent = ""
+      let combinedContent = ''
 
       // Add medium summary if available
       if (outputs.mediumSummary) {
@@ -109,8 +137,8 @@ export function OutputContent() {
         combinedContent += '<div style="page-break-before: always;"></div>'
 
         // If the how-to guide doesn't start with a heading, add one
-        if (!outputs.howToGuide.includes("<h1>")) {
-          combinedContent += "<h1>How-to Guide</h1>"
+        if (!outputs.howToGuide.includes('<h1>')) {
+          combinedContent += '<h1>How-to Guide</h1>'
         }
 
         combinedContent += outputs.howToGuide
@@ -119,38 +147,53 @@ export function OutputContent() {
       // Generate the DOCX with a proper title
       const documentTitle = `Research Summary - ${currentDate}`
       const dataUri = await generateDOCX(combinedContent, documentTitle)
-      const filename = `research-summary-${currentDate.toLowerCase().replace(/\s+/g, "-")}.docx`
+      const filename = `research-summary-${currentDate
+        .toLowerCase()
+        .replace(/\s+/g, '-')}.docx`
+
+      // Convert data URI to blob for better memory management
+      const response = await fetch(dataUri)
+      const blob = await response.blob()
+      objectUrl = URL.createObjectURL(blob)
 
       // Create a link element and trigger download
-      const link = document.createElement("a")
-      link.href = dataUri
+      link = document.createElement('a')
+      link.href = objectUrl
       link.download = filename
       document.body.appendChild(link)
       link.click()
-      document.body.removeChild(link)
 
       toast({
-        title: "Download started",
-        description: "Your combined document is being downloaded",
-        type: "success",
+        title: 'Download started',
+        description: 'Your combined document is being downloaded',
+        type: 'success',
         duration: 3000,
       })
     } catch (error) {
-      console.error("Error generating combined document:", error)
+      console.error('Error generating combined document:', error)
 
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to generate combined document. Please try again."
+        error instanceof Error
+          ? error.message
+          : 'Failed to generate combined document. Please try again.'
 
       // Track error in PostHog
-      analytics.trackError("download_combined_failed", errorMessage)
+      analytics.trackError('download_combined_failed', errorMessage)
 
       toast({
-        title: "Download failed",
+        title: 'Download failed',
         description: errorMessage,
-        type: "error",
+        type: 'error',
         duration: 7000,
       })
     } finally {
+      // Clean up resources in finally block to prevent memory leaks
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl)
+      }
+      if (link && link.parentNode) {
+        document.body.removeChild(link)
+      }
       setIsDownloading(false)
     }
   }
@@ -198,8 +241,13 @@ export function OutputContent() {
               disabled={isProcessing[outputType]}
               className="flex items-center gap-1"
             >
-              {isProcessing[outputType] ? <Spinner className="h-4 w-4 mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
-              Regenerate {outputType === "howToGuide" ? "How-to Guide" : "Medium Summary"}
+              {isProcessing[outputType] ? (
+                <Spinner className="h-4 w-4 mr-1" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-1" />
+              )}
+              Regenerate{' '}
+              {outputType === 'howToGuide' ? 'How-to Guide' : 'Medium Summary'}
             </Button>
           </div>
         </div>
@@ -209,7 +257,9 @@ export function OutputContent() {
     return (
       <p className="text-sm text-muted-foreground text-center py-4">
         {isProcessing[outputType]
-          ? `Generating ${outputType === "howToGuide" ? "how-to guide" : "medium summary"}...`
+          ? `Generating ${
+              outputType === 'howToGuide' ? 'how-to guide' : 'medium summary'
+            }...`
           : `Click the Generate button to create content.`}
       </p>
     )
@@ -264,7 +314,7 @@ export function OutputContent() {
         <div className="p-4 border-b">
           <h3 className="text-lg font-medium">Medium Summary</h3>
         </div>
-        <div className="flex-grow">{renderOutputSection("mediumSummary")}</div>
+        <div className="flex-grow">{renderOutputSection('mediumSummary')}</div>
       </div>
 
       {/* How-to Guide Section */}
@@ -272,7 +322,7 @@ export function OutputContent() {
         <div className="p-4 border-b">
           <h3 className="text-lg font-medium">How-to Guide</h3>
         </div>
-        <div className="flex-grow">{renderOutputSection("howToGuide")}</div>
+        <div className="flex-grow">{renderOutputSection('howToGuide')}</div>
       </div>
     </div>
   )

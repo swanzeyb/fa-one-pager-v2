@@ -11,23 +11,33 @@ export interface StructuredElement {
 }
 
 export function parseHtmlToStructure(html: string): StructuredElement[] {
-  // Create a temporary DOM element to parse the HTML
-  const tempDiv = document.createElement("div")
-  tempDiv.innerHTML = html
+  let tempDiv: HTMLDivElement | null = null
 
-  // Convert the DOM elements to a structured format
-  return Array.from(tempDiv.childNodes).map((node) => nodeToStructure(node))
+  try {
+    // Create a temporary DOM element to parse the HTML
+    tempDiv = document.createElement('div')
+    tempDiv.innerHTML = html
+
+    // Convert the DOM elements to a structured format
+    return Array.from(tempDiv.childNodes).map((node) => nodeToStructure(node))
+  } finally {
+    // Clean up the temporary element to prevent memory leaks
+    if (tempDiv) {
+      tempDiv.innerHTML = '' // Clear content to release references
+      tempDiv = null
+    }
+  }
 }
 
 function nodeToStructure(node: Node): StructuredElement {
   // Text node
   if (node.nodeType === Node.TEXT_NODE) {
-    const content = node.textContent?.trim() || ""
+    const content = node.textContent?.trim() || ''
     // Skip empty text nodes
     if (!content) {
-      return { type: "text", content: "" }
+      return { type: 'text', content: '' }
     }
-    return { type: "text", content }
+    return { type: 'text', content }
   }
 
   // Element node
@@ -36,8 +46,8 @@ function nodeToStructure(node: Node): StructuredElement {
     const type = element.tagName.toLowerCase()
 
     // Handle special cases
-    if (type === "br") {
-      return { type: "br", content: "" }
+    if (type === 'br') {
+      return { type: 'br', content: '' }
     }
 
     // Extract attributes
@@ -47,7 +57,7 @@ function nodeToStructure(node: Node): StructuredElement {
     })
 
     // Extract content and children
-    let content = ""
+    let content = ''
     const children: StructuredElement[] = []
 
     if (element.childNodes.length > 0) {
@@ -57,12 +67,12 @@ function nodeToStructure(node: Node): StructuredElement {
       })
 
       // For simple elements with only text content, extract it directly
-      if (children.length === 1 && children[0].type === "text") {
+      if (children.length === 1 && children[0].type === 'text') {
         content = children[0].content
       }
     } else {
       // For empty elements
-      content = ""
+      content = ''
     }
 
     return {
@@ -74,7 +84,7 @@ function nodeToStructure(node: Node): StructuredElement {
   }
 
   // Default case for other node types
-  return { type: "unknown", content: node.textContent || "" }
+  return { type: 'unknown', content: node.textContent || '' }
 }
 
 /**
@@ -83,37 +93,39 @@ function nodeToStructure(node: Node): StructuredElement {
  * @returns HTML string
  */
 export function structureToHtml(structure: StructuredElement[]): string {
-  return structure.map((element) => elementToHtml(element)).join("")
+  return structure.map((element) => elementToHtml(element)).join('')
 }
 
 function elementToHtml(element: StructuredElement): string {
   // Handle text nodes
-  if (element.type === "text") {
+  if (element.type === 'text') {
     return element.content
   }
 
   // Handle break elements
-  if (element.type === "br") {
-    return "<br>"
+  if (element.type === 'br') {
+    return '<br>'
   }
 
   // Handle regular elements
   const attributes = element.attributes
     ? Object.entries(element.attributes)
         .map(([key, value]) => `${key}="${value}"`)
-        .join(" ")
-    : ""
+        .join(' ')
+    : ''
 
-  const attributeString = attributes ? ` ${attributes}` : ""
+  const attributeString = attributes ? ` ${attributes}` : ''
 
   // Self-closing tags
-  if (["img", "hr", "input"].includes(element.type)) {
+  if (['img', 'hr', 'input'].includes(element.type)) {
     return `<${element.type}${attributeString} />`
   }
 
   // Elements with children
   if (element.children && element.children.length > 0) {
-    const childrenHtml = element.children.map((child) => elementToHtml(child)).join("")
+    const childrenHtml = element.children
+      .map((child) => elementToHtml(child))
+      .join('')
     return `<${element.type}${attributeString}>${childrenHtml}</${element.type}>`
   }
 
