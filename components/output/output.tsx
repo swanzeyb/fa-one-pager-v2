@@ -13,6 +13,7 @@ import {
   EditorContent,
   useSimpleEditor,
 } from '../simple-editor'
+import { CombinedDownloadButton } from '@/components/unified-download-button'
 import type { OutputType, FileAttachment } from '@/app/actions'
 import type React from 'react'
 import { useState, useRef } from 'react'
@@ -76,7 +77,6 @@ export function OutputContent() {
   } = useOutput()
   const { files, fileAttachments, prepareFileAttachments } = useFileUpload()
   const [editorContent, setEditorContent] = useState('')
-  const [isDownloading, setIsDownloading] = useState(false)
   const { toast } = useToast()
   const editorRef = useRef(null)
 
@@ -119,108 +119,6 @@ export function OutputContent() {
   const handleEditorChange = (content: string, outputType: OutputType) => {
     if (outputType === 'mediumSummary') {
       setEditorContent(content)
-    }
-  }
-
-  const handleCombinedDownload = async () => {
-    // Check if we have content to download
-    if (!outputs.mediumSummary && !outputs.howToGuide) {
-      toast({
-        title: 'No content to download',
-        description: 'Please generate content first before downloading',
-        type: 'warning',
-        duration: 3000,
-      })
-      return
-    }
-
-    setIsDownloading(true)
-    let objectUrl: string | null = null
-    let link: HTMLAnchorElement | null = null
-
-    try {
-      // Track download in PostHog
-      analytics.trackDownload('combined', 'docx')
-
-      // Get the current date for the document title
-      const currentDate = new Date().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })
-
-      // Create a properly structured combined document
-      let combinedContent = ''
-
-      // Add medium summary if available
-      if (outputs.mediumSummary) {
-        combinedContent += outputs.mediumSummary
-      }
-
-      // Add a page break and how-to guide if available
-      if (outputs.howToGuide) {
-        // Add a page break between sections
-        combinedContent += '<div style="page-break-before: always;"></div>'
-
-        // If the how-to guide doesn't start with a heading, add one
-        if (!outputs.howToGuide.includes('<h1>')) {
-          combinedContent += '<h1>How-to Guide</h1>'
-        }
-
-        combinedContent += outputs.howToGuide
-      }
-
-      // Generate the DOCX with a proper title
-      const documentTitle = `Research Summary - ${currentDate}`
-      const dataUri = await generateDOCX(combinedContent, documentTitle)
-      const filename = `research-summary-${currentDate
-        .toLowerCase()
-        .replace(/\s+/g, '-')}.docx`
-
-      // Convert data URI to blob for better memory management
-      const response = await fetch(dataUri)
-      const blob = await response.blob()
-      objectUrl = URL.createObjectURL(blob)
-
-      // Create a link element and trigger download
-      link = document.createElement('a')
-      link.href = objectUrl
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-
-      toast({
-        title: 'Download started',
-        description: 'Your combined document is being downloaded',
-        type: 'success',
-        duration: 3000,
-      })
-    } catch (error) {
-      console.error('Error generating combined document:', error)
-
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to generate combined document. Please try again.'
-
-      // Track error in PostHog
-      analytics.trackError('download_combined_failed', errorMessage)
-
-      toast({
-        title: 'Download failed',
-        description: errorMessage,
-        type: 'error',
-        duration: 7000,
-      })
-    } finally {
-      // Clean up resources in finally block to prevent memory leaks
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl)
-      }
-      if (link && link.parentNode) {
-        document.body.removeChild(link)
-      }
-      setIsDownloading(false)
     }
   }
 
@@ -340,25 +238,13 @@ export function OutputContent() {
           )}
         </Button>
 
-        <Button
-          size="lg"
-          variant="outline"
-          onClick={handleCombinedDownload}
-          disabled={isDownloading || !hasContent}
-          className="w-full sm:w-1/3 py-6 text-lg flex items-center justify-center"
-        >
-          {isDownloading ? (
-            <>
-              <Spinner className="h-5 w-5 mr-2" />
-              Downloading...
-            </>
-          ) : (
-            <>
-              <Download className="h-5 w-5 mr-2" />
-              Download Word
-            </>
-          )}
-        </Button>
+        <CombinedDownloadButton
+          mediumSummary={outputs.mediumSummary}
+          howToGuide={outputs.howToGuide}
+          disabled={isGenerating}
+          className="w-full sm:w-1/3 py-6 text-lg"
+          showProgress={true}
+        />
       </div>
 
       {/* Medium Summary Section */}
