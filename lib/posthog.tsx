@@ -65,6 +65,14 @@ export const analytics = {
     })
   },
 
+  // Track individual output retries
+  trackIndividualRetry: (outputType: string) => {
+    if (typeof window === 'undefined') return
+    posthog.capture('individual_output_retry', {
+      output_type: outputType,
+    })
+  },
+
   // Track downloads
   trackDownload: (outputType: string, fileFormat: string) => {
     if (typeof window === 'undefined') return

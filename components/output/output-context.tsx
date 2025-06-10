@@ -125,7 +125,12 @@ export function OutputProvider({ children }: OutputProviderProps) {
       // Track generation/regeneration in PostHog
       analytics.trackOutputGeneration(outputType, isRegeneration)
 
-      // Clear any previous errors
+      // If this is a retry of a failed output, track it separately
+      if (!isRegeneration && state.errors[outputType]) {
+        analytics.trackIndividualRetry(outputType)
+      }
+
+      // Clear any previous errors for ONLY this output type
       setState((prev) => ({
         ...prev,
         errors: { ...prev.errors, [outputType]: null },
@@ -189,7 +194,7 @@ export function OutputProvider({ children }: OutputProviderProps) {
         })
       }
     },
-    [toast]
+    [toast, state.errors]
   )
 
   const processMultipleOutputs = useCallback(
@@ -402,4 +407,9 @@ export function getOutputTypeTitle(type: OutputType): string {
     default:
       return type
   }
+}
+
+// Helper function to check if an output exists and has content
+function hasValidOutput(output: string): boolean {
+  return Boolean(output && output.trim().length > 0)
 }

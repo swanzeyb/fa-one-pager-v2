@@ -82,12 +82,38 @@ export function OutputContent() {
 
   const handleGenerate = async () => {
     const attachments = await prepareFileAttachments()
+
+    // Check if we have any existing successful outputs
+    const hasSuccessfulMedium = outputs.mediumSummary && !errors.mediumSummary
+    const hasSuccessfulHowTo = outputs.howToGuide && !errors.howToGuide
+
+    // If we have some successful outputs, offer to only generate failed ones
+    if (hasSuccessfulMedium || hasSuccessfulHowTo) {
+      const failedOutputs = []
+      if (!hasSuccessfulMedium) failedOutputs.push('mediumSummary')
+      if (!hasSuccessfulHowTo) failedOutputs.push('howToGuide')
+
+      if (failedOutputs.length > 0) {
+        // Only process failed outputs to avoid unnecessary API calls
+        for (const outputType of failedOutputs) {
+          await processOutputType(outputType as OutputType, attachments, false)
+        }
+        return
+      }
+    }
+
+    // If no successful outputs exist, or all are successful (regenerate all), use bulk processing
     processMultipleOutputs(attachments)
   }
 
   const handleRegenerate = async (outputType: OutputType) => {
     const attachments = await prepareFileAttachments()
     processOutputType(outputType, attachments, true) // true indicates this is a regeneration
+  }
+
+  const handleRetryFailed = async (outputType: OutputType) => {
+    const attachments = await prepareFileAttachments()
+    processOutputType(outputType, attachments, false) // false indicates this is a retry, not regeneration
   }
 
   const handleEditorChange = (content: string, outputType: OutputType) => {
@@ -209,12 +235,23 @@ export function OutputContent() {
             variant="outline"
             size="sm"
             className="mt-4"
-            onClick={async () => {
-              const attachments = await prepareFileAttachments()
-              processMultipleOutputs(attachments)
-            }}
+            onClick={() => handleRetryFailed(outputType)}
+            disabled={isProcessing[outputType]}
           >
-            Try Again
+            {isProcessing[outputType] ? (
+              <>
+                <Spinner className="h-4 w-4 mr-1" />
+                Retrying...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Retry{' '}
+                {outputType === 'howToGuide'
+                  ? 'How-to Guide'
+                  : 'Medium Summary'}
+              </>
+            )}
           </Button>
         </div>
       )
@@ -267,6 +304,21 @@ export function OutputContent() {
 
   const isGenerating = isProcessing.mediumSummary || isProcessing.howToGuide
   const hasContent = outputs.mediumSummary || outputs.howToGuide
+  const hasSuccessfulMedium = outputs.mediumSummary && !errors.mediumSummary
+  const hasSuccessfulHowTo = outputs.howToGuide && !errors.howToGuide
+  const hasFailedOutputs = errors.mediumSummary || errors.howToGuide
+
+  const getGenerateButtonText = () => {
+    if (isGenerating) return 'Generating Content...'
+
+    if (hasSuccessfulMedium && hasSuccessfulHowTo) {
+      return 'Regenerate All Content'
+    } else if (hasSuccessfulMedium || hasSuccessfulHowTo) {
+      return 'Generate Missing Content'
+    } else {
+      return 'Generate Content'
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -281,10 +333,10 @@ export function OutputContent() {
           {isGenerating ? (
             <>
               <Spinner className="h-5 w-5 mr-2" />
-              Generating Content...
+              {getGenerateButtonText()}
             </>
           ) : (
-            <>Generate Content</>
+            <>{getGenerateButtonText()}</>
           )}
         </Button>
 
@@ -311,16 +363,34 @@ export function OutputContent() {
 
       {/* Medium Summary Section */}
       <div className="border rounded-md">
-        <div className="p-4 border-b">
-          <h3 className="text-lg font-medium">Medium Summary</h3>
+        <div className="p-4 border-b flex items-center justify-between">
+          <h3 className="text-lg font-medium flex items-center">
+            Medium Summary
+            {outputs.mediumSummary && !errors.mediumSummary && (
+              <span className="ml-2 w-2 h-2 bg-green-500 rounded-full"></span>
+            )}
+            {errors.mediumSummary && (
+              <span className="ml-2 w-2 h-2 bg-red-500 rounded-full"></span>
+            )}
+            {isProcessing.mediumSummary && <Spinner className="ml-2 h-4 w-4" />}
+          </h3>
         </div>
         <div className="flex-grow">{renderOutputSection('mediumSummary')}</div>
       </div>
 
       {/* How-to Guide Section */}
       <div className="border rounded-md">
-        <div className="p-4 border-b">
-          <h3 className="text-lg font-medium">How-to Guide</h3>
+        <div className="p-4 border-b flex items-center justify-between">
+          <h3 className="text-lg font-medium flex items-center">
+            How-to Guide
+            {outputs.howToGuide && !errors.howToGuide && (
+              <span className="ml-2 w-2 h-2 bg-green-500 rounded-full"></span>
+            )}
+            {errors.howToGuide && (
+              <span className="ml-2 w-2 h-2 bg-red-500 rounded-full"></span>
+            )}
+            {isProcessing.howToGuide && <Spinner className="ml-2 h-4 w-4" />}
+          </h3>
         </div>
         <div className="flex-grow">{renderOutputSection('howToGuide')}</div>
       </div>
