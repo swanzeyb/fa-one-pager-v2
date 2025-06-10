@@ -1,12 +1,19 @@
-"use server"
+'use server'
 
-import { generateText } from "ai"
-import { google } from "@ai-sdk/google"
-import { jsPDF } from "jspdf"
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak } from "docx"
-import prompts from "./prompts.json"
+import { generateText } from 'ai'
+import { google } from '@ai-sdk/google'
+import { jsPDF } from 'jspdf'
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  PageBreak,
+} from 'docx'
+import prompts from './prompts.json'
 
-export type OutputType = "shortSummary" | "mediumSummary" | "howToGuide"
+export type OutputType = 'shortSummary' | 'mediumSummary' | 'howToGuide'
 
 export type FileAttachment = {
   name: string
@@ -22,10 +29,15 @@ export type StructuredElement = {
 }
 
 // Function to process output with retry logic
-export async function processOutput(fileAttachments: FileAttachment[], outputType: OutputType, isRegeneration = false) {
+export async function processOutput(
+  fileAttachments: FileAttachment[],
+  outputType: OutputType,
+  isRegeneration = false
+) {
+  debugger
   // Validate input
   if (!fileAttachments || fileAttachments.length === 0) {
-    throw new Error("No file attachments provided")
+    throw new Error('No file attachments provided')
   }
 
   // Create file parts for each attachment with error handling
@@ -41,7 +53,7 @@ export async function processOutput(fileAttachments: FileAttachment[], outputTyp
       }
 
       fileParts.push({
-        type: "file" as const,
+        type: 'file' as const,
         data: file.data,
         mimeType: file.contentType,
       })
@@ -52,7 +64,7 @@ export async function processOutput(fileAttachments: FileAttachment[], outputTyp
   }
 
   if (fileParts.length === 0) {
-    throw new Error("No valid files could be processed")
+    throw new Error('No valid files could be processed')
   }
 
   // Maximum number of retry attempts
@@ -66,41 +78,50 @@ export async function processOutput(fileAttachments: FileAttachment[], outputTyp
       // Slightly increase temperature with each retry to get different results
       const temperatureAdjustment = retryCount * 0.1
       const baseTemperature = isRegeneration ? 0.7 : 0.3
-      const adjustedTemperature = Math.min(baseTemperature + temperatureAdjustment, 0.9)
+      const adjustedTemperature = Math.min(
+        baseTemperature + temperatureAdjustment,
+        0.9
+      )
 
       // Create model with adjusted temperature
-      const model = google("gemini-2.0-flash", {
+      const model = google('gemini-2.0-flash', {
         temperature: adjustedTemperature,
       })
 
       // Create messages array for the specified output type
       const messages = [
         {
-          role: "system" as const,
+          role: 'system' as const,
           content:
             prompts[outputType].system +
             (isRegeneration
-              ? " For this regeneration, provide a fresh perspective with different wording and structure than previous versions."
-              : "") +
+              ? ' For this regeneration, provide a fresh perspective with different wording and structure than previous versions.'
+              : '') +
             (retryCount > 0
-              ? ` This is attempt ${retryCount + 1} after previous failures. Please ensure your response strictly follows the required format.`
-              : "") +
+              ? ` This is attempt ${
+                  retryCount + 1
+                } after previous failures. Please ensure your response strictly follows the required format.`
+              : '') +
             (fileParts.length > 1
               ? ` You are processing ${fileParts.length} files. Please synthesize information from all files.`
-              : ""),
+              : ''),
         },
         {
-          role: "user" as const,
+          role: 'user' as const,
           content: [
             {
-              type: "text" as const,
+              type: 'text' as const,
               text:
                 prompts[outputType].prompt +
-                (isRegeneration ? " Please make this regeneration noticeably different from previous versions." : "") +
-                (retryCount > 0 ? " Please ensure your response follows the required format exactly." : "") +
+                (isRegeneration
+                  ? ' Please make this regeneration noticeably different from previous versions.'
+                  : '') +
+                (retryCount > 0
+                  ? ' Please ensure your response follows the required format exactly.'
+                  : '') +
                 (fileParts.length > 1
                   ? ` Please analyze and synthesize information from all ${fileParts.length} uploaded files.`
-                  : ""),
+                  : ''),
             },
             ...fileParts,
           ],
@@ -115,13 +136,16 @@ export async function processOutput(fileAttachments: FileAttachment[], outputTyp
 
       // Validate that we got some content
       if (!result.text || result.text.trim().length < 50) {
-        throw new Error("Generated content is too short or empty")
+        throw new Error('Generated content is too short or empty')
       }
 
       // Return the HTML content directly
       return result.text
     } catch (error) {
-      console.error(`Error generating content (attempt ${retryCount + 1}/${MAX_RETRIES}):`, error)
+      console.error(
+        `Error generating content (attempt ${retryCount + 1}/${MAX_RETRIES}):`,
+        error
+      )
       lastError = error
       retryCount++
 
@@ -129,8 +153,8 @@ export async function processOutput(fileAttachments: FileAttachment[], outputTyp
       if (retryCount >= MAX_RETRIES) {
         throw new Error(
           `Failed to generate ${outputType} after ${MAX_RETRIES} attempts: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
         )
       }
 
@@ -141,7 +165,9 @@ export async function processOutput(fileAttachments: FileAttachment[], outputTyp
 
   // This should never be reached due to the throw in the loop, but TypeScript needs it
   throw new Error(
-    `Failed to generate ${outputType}: ${lastError instanceof Error ? lastError.message : "Unknown error"}`,
+    `Failed to generate ${outputType}: ${
+      lastError instanceof Error ? lastError.message : 'Unknown error'
+    }`
   )
 }
 
@@ -156,7 +182,7 @@ export async function generatePDF(content: string, title: string) {
   let yPosition = margin
 
   // Add title to the PDF
-  doc.setFont("helvetica", "bold")
+  doc.setFont('helvetica', 'bold')
   doc.setFontSize(20)
   doc.text(title, margin, yPosition)
   yPosition += 15
@@ -164,7 +190,7 @@ export async function generatePDF(content: string, title: string) {
   try {
     // Create a temporary DOM element to parse the HTML
     const parser = new DOMParser()
-    const htmlDoc = parser.parseFromString(content, "text/html")
+    const htmlDoc = parser.parseFromString(content, 'text/html')
     const elements = htmlDoc.body.childNodes
 
     // Track if we've seen the first h1 to avoid duplicating the title
@@ -178,17 +204,20 @@ export async function generatePDF(content: string, title: string) {
       if (element.nodeType !== Node.ELEMENT_NODE) continue
 
       // Get the text content
-      const text = element.textContent || ""
+      const text = element.textContent || ''
       if (!text.trim()) continue
 
       // Apply styling based on tag type
       switch (element.tagName.toLowerCase()) {
-        case "h1":
+        case 'h1':
           // Skip the first h1 if it's similar to the title to avoid duplication
           if (!firstH1Processed) {
             firstH1Processed = true
             // If the h1 content is very similar to the title, skip it
-            if (text.toLowerCase().includes(title.toLowerCase()) || title.toLowerCase().includes(text.toLowerCase())) {
+            if (
+              text.toLowerCase().includes(title.toLowerCase()) ||
+              title.toLowerCase().includes(text.toLowerCase())
+            ) {
               continue
             }
           }
@@ -199,45 +228,45 @@ export async function generatePDF(content: string, title: string) {
             yPosition = margin
           }
 
-          doc.setFont("helvetica", "bold")
+          doc.setFont('helvetica', 'bold')
           doc.setFontSize(18)
           const h1Lines = doc.splitTextToSize(text, textWidth)
           doc.text(h1Lines, margin, yPosition)
           yPosition += 7 * h1Lines.length + 5
           break
 
-        case "h2":
+        case 'h2':
           // Check if we need a page break
           if (yPosition > doc.internal.pageSize.getHeight() - 40) {
             doc.addPage()
             yPosition = margin
           }
 
-          doc.setFont("helvetica", "bold")
+          doc.setFont('helvetica', 'bold')
           doc.setFontSize(16)
           const h2Lines = doc.splitTextToSize(text, textWidth)
           doc.text(h2Lines, margin, yPosition)
           yPosition += 6 * h2Lines.length + 4
           break
 
-        case "p":
+        case 'p':
           // Check if we need a page break
           if (yPosition > doc.internal.pageSize.getHeight() - 40) {
             doc.addPage()
             yPosition = margin
           }
 
-          doc.setFont("helvetica", "normal")
+          doc.setFont('helvetica', 'normal')
           doc.setFontSize(12)
           const pLines = doc.splitTextToSize(text, textWidth)
           doc.text(pLines, margin, yPosition)
           yPosition += 5 * pLines.length + 5
           break
 
-        case "ol":
-        case "ul":
+        case 'ol':
+        case 'ul':
           // Process list items
-          const listItems = element.getElementsByTagName("li")
+          const listItems = element.getElementsByTagName('li')
           for (let j = 0; j < listItems.length; j++) {
             // Check if we need a page break
             if (yPosition > doc.internal.pageSize.getHeight() - 40) {
@@ -245,12 +274,13 @@ export async function generatePDF(content: string, title: string) {
               yPosition = margin
             }
 
-            const itemText = listItems[j].textContent || ""
-            doc.setFont("helvetica", "normal")
+            const itemText = listItems[j].textContent || ''
+            doc.setFont('helvetica', 'normal')
             doc.setFontSize(12)
 
             // Format based on list type
-            const prefix = element.tagName.toLowerCase() === "ol" ? `${j + 1}. ` : "• "
+            const prefix =
+              element.tagName.toLowerCase() === 'ol' ? `${j + 1}. ` : '• '
             const formattedText = prefix + itemText
 
             // Removed left margin for list items - now aligned with the main margin
@@ -261,7 +291,7 @@ export async function generatePDF(content: string, title: string) {
           yPosition += 2 // Add extra space after list
           break
 
-        case "li":
+        case 'li':
           // Individual list items are handled within ol/ul processing
           break
 
@@ -272,7 +302,7 @@ export async function generatePDF(content: string, title: string) {
             yPosition = margin
           }
 
-          doc.setFont("helvetica", "normal")
+          doc.setFont('helvetica', 'normal')
           doc.setFontSize(12)
           const defaultLines = doc.splitTextToSize(text, textWidth)
           doc.text(defaultLines, margin, yPosition)
@@ -280,22 +310,23 @@ export async function generatePDF(content: string, title: string) {
       }
     }
   } catch (error) {
-    console.error("Error generating PDF:", error)
+    console.error('Error generating PDF:', error)
     // Fallback to simple text
     doc.setFontSize(12)
-    doc.setFont("helvetica", "normal")
-    doc.text("Error processing content. Please try again.", margin, 40)
+    doc.setFont('helvetica', 'normal')
+    doc.text('Error processing content. Please try again.', margin, 40)
   }
 
   // Return base64 encoded PDF
-  return doc.output("datauristring")
+  return doc.output('datauristring')
 }
 
 export async function generateDOCX(content: string, title: string) {
   try {
+    debugger
     // Create a temporary DOM element to parse the HTML
     const parser = new DOMParser()
-    const htmlDoc = parser.parseFromString(content, "text/html")
+    const htmlDoc = parser.parseFromString(content, 'text/html')
 
     // Create document with sections
     const docChildren = []
@@ -314,7 +345,7 @@ export async function generateDOCX(content: string, title: string) {
         spacing: {
           after: 400,
         },
-      }),
+      })
     )
 
     // Process each element in the HTML body
@@ -325,7 +356,10 @@ export async function generateDOCX(content: string, title: string) {
       const element = elements[i] as HTMLElement
 
       // Handle page break divs
-      if (element.tagName?.toLowerCase() === "div" && element.style?.pageBreakBefore === "always") {
+      if (
+        element.tagName?.toLowerCase() === 'div' &&
+        element.style?.pageBreakBefore === 'always'
+      ) {
         docChildren.push(new Paragraph({ children: [new PageBreak()] }))
         skipNextPageBreak = true
         continue
@@ -335,12 +369,12 @@ export async function generateDOCX(content: string, title: string) {
       if (element.nodeType !== Node.ELEMENT_NODE) continue
 
       // Get the text content
-      const text = element.textContent || ""
+      const text = element.textContent || ''
       if (!text.trim()) continue
 
       // Apply styling based on tag type
       switch (element.tagName.toLowerCase()) {
-        case "h1":
+        case 'h1':
           // Add a page break before new major sections (unless we just added one)
           if (!skipNextPageBreak) {
             docChildren.push(new Paragraph({ children: [new PageBreak()] }))
@@ -361,11 +395,11 @@ export async function generateDOCX(content: string, title: string) {
                 after: 300,
                 before: 300,
               },
-            }),
+            })
           )
           break
 
-        case "h2":
+        case 'h2':
           docChildren.push(
             new Paragraph({
               heading: HeadingLevel.HEADING_2,
@@ -380,11 +414,11 @@ export async function generateDOCX(content: string, title: string) {
                 after: 200,
                 before: 200,
               },
-            }),
+            })
           )
           break
 
-        case "p":
+        case 'p':
           docChildren.push(
             new Paragraph({
               children: [
@@ -396,19 +430,20 @@ export async function generateDOCX(content: string, title: string) {
               spacing: {
                 after: 120,
               },
-            }),
+            })
           )
           break
 
-        case "ol":
-        case "ul":
+        case 'ol':
+        case 'ul':
           // Process list items
-          const listItems = element.getElementsByTagName("li")
+          const listItems = element.getElementsByTagName('li')
           for (let j = 0; j < listItems.length; j++) {
-            const itemText = listItems[j].textContent || ""
+            const itemText = listItems[j].textContent || ''
 
             // Format based on list type
-            const prefix = element.tagName.toLowerCase() === "ol" ? `${j + 1}. ` : "• "
+            const prefix =
+              element.tagName.toLowerCase() === 'ol' ? `${j + 1}. ` : '• '
 
             docChildren.push(
               new Paragraph({
@@ -424,19 +459,19 @@ export async function generateDOCX(content: string, title: string) {
                 indent: {
                   left: 720, // 0.5 inches in twips (1440 twips = 1 inch)
                 },
-              }),
+              })
             )
           }
           // Add extra space after list
           docChildren.push(
             new Paragraph({
-              children: [new TextRun({ text: "" })],
+              children: [new TextRun({ text: '' })],
               spacing: { after: 120 },
-            }),
+            })
           )
           break
 
-        case "li":
+        case 'li':
           // Individual list items are handled within ol/ul processing
           break
 
@@ -453,7 +488,7 @@ export async function generateDOCX(content: string, title: string) {
               spacing: {
                 after: 120,
               },
-            }),
+            })
           )
       }
     }
@@ -481,12 +516,12 @@ export async function generateDOCX(content: string, title: string) {
     const buffer = await Packer.toBuffer(doc)
 
     // Convert buffer to base64
-    const base64 = Buffer.from(buffer).toString("base64")
+    const base64 = Buffer.from(buffer).toString('base64')
 
     // Return as data URI
     return `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`
   } catch (error) {
-    console.error("Error generating DOCX:", error)
+    console.error('Error generating DOCX:', error)
 
     // Create a simple error document
     const doc = new Document({
@@ -507,7 +542,7 @@ export async function generateDOCX(content: string, title: string) {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: "Error processing content. Please try again.",
+                  text: 'Error processing content. Please try again.',
                   size: 24,
                 }),
               ],
@@ -521,7 +556,7 @@ export async function generateDOCX(content: string, title: string) {
     const buffer = await Packer.toBuffer(doc)
 
     // Convert buffer to base64
-    const base64 = Buffer.from(buffer).toString("base64")
+    const base64 = Buffer.from(buffer).toString('base64')
 
     // Return as data URI
     return `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`

@@ -1,9 +1,19 @@
-"use client"
+'use client'
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
-import { useToast } from "@/hooks/use-toast"
-import { processOutput, type OutputType, type FileAttachment } from "@/app/actions"
-import { analytics } from "@/lib/posthog"
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  type ReactNode,
+} from 'react'
+import { useToast } from '@/hooks/use-toast'
+import {
+  processOutput,
+  type OutputType,
+  type FileAttachment,
+} from '@/app/actions'
+import { analytics } from '@/lib/posthog'
 
 interface OutputState {
   outputs: Record<OutputType, string>
@@ -19,7 +29,7 @@ interface OutputContextType extends OutputState {
   processOutputType: (
     outputType: OutputType,
     fileAttachments: FileAttachment[],
-    isRegeneration?: boolean,
+    isRegeneration?: boolean
   ) => Promise<void>
   processMultipleOutputs: (fileAttachments: FileAttachment[]) => Promise<void>
   updateEditedOutput: (outputType: OutputType, content: string) => void
@@ -31,7 +41,7 @@ const OutputContext = createContext<OutputContextType | undefined>(undefined)
 export function useOutput() {
   const context = useContext(OutputContext)
   if (context === undefined) {
-    throw new Error("useOutput must be used within an OutputProvider")
+    throw new Error('useOutput must be used within an OutputProvider')
   }
   return context
 }
@@ -44,14 +54,14 @@ export function OutputProvider({ children }: OutputProviderProps) {
   const { toast } = useToast()
   const [state, setState] = useState<OutputState>({
     outputs: {
-      shortSummary: "",
-      mediumSummary: "",
-      howToGuide: "",
+      shortSummary: '',
+      mediumSummary: '',
+      howToGuide: '',
     },
     editedOutputs: {
-      shortSummary: "",
-      mediumSummary: "",
-      howToGuide: "",
+      shortSummary: '',
+      mediumSummary: '',
+      howToGuide: '',
     },
     isProcessing: {
       shortSummary: false,
@@ -63,7 +73,7 @@ export function OutputProvider({ children }: OutputProviderProps) {
       mediumSummary: null,
       howToGuide: null,
     },
-    activeTab: "shortSummary",
+    activeTab: 'shortSummary',
     retryCount: {
       shortSummary: 0,
       mediumSummary: 0,
@@ -77,29 +87,36 @@ export function OutputProvider({ children }: OutputProviderProps) {
     setState((prev) => ({ ...prev, activeTab: tab }))
   }, [])
 
-  const updateEditedOutput = useCallback((outputType: OutputType, content: string) => {
-    setState((prev) => ({
-      ...prev,
-      editedOutputs: { ...prev.editedOutputs, [outputType]: content },
-    }))
-  }, [])
+  const updateEditedOutput = useCallback(
+    (outputType: OutputType, content: string) => {
+      setState((prev) => ({
+        ...prev,
+        editedOutputs: { ...prev.editedOutputs, [outputType]: content },
+      }))
+    },
+    []
+  )
 
   const getOutputContent = useCallback(
     (outputType: OutputType) => {
       // Return edited content if it exists, otherwise return original output
       return state.editedOutputs[outputType] || state.outputs[outputType]
     },
-    [state.editedOutputs, state.outputs],
+    [state.editedOutputs, state.outputs]
   )
 
   const processOutputType = useCallback(
-    async (outputType: OutputType, fileAttachments: FileAttachment[], isRegeneration = false) => {
+    async (
+      outputType: OutputType,
+      fileAttachments: FileAttachment[],
+      isRegeneration = false
+    ) => {
       if (fileAttachments.length === 0) {
-        analytics.trackError("no_files", "No files selected for processing")
+        analytics.trackError('no_files', 'No files selected for processing')
         toast({
-          title: "No files selected",
-          description: "Please upload at least one file to process",
-          type: "warning",
+          title: 'No files selected',
+          description: 'Please upload at least one file to process',
+          type: 'warning',
           duration: 3000,
         })
         return
@@ -117,20 +134,28 @@ export function OutputProvider({ children }: OutputProviderProps) {
 
       try {
         // The processOutput function now has built-in retry logic
-        const result = await processOutput(fileAttachments, outputType, isRegeneration)
+        const result = await processOutput(
+          fileAttachments,
+          outputType,
+          isRegeneration
+        )
 
         setState((prev) => ({
           ...prev,
           outputs: { ...prev.outputs, [outputType]: result },
-          editedOutputs: { ...prev.editedOutputs, [outputType]: "" }, // Clear edited content
+          editedOutputs: { ...prev.editedOutputs, [outputType]: '' }, // Clear edited content
           isProcessing: { ...prev.isProcessing, [outputType]: false },
           retryCount: { ...prev.retryCount, [outputType]: 0 }, // Reset retry count on success
         }))
 
         toast({
-          title: isRegeneration ? "Regeneration complete" : "Processing complete",
-          description: `${getOutputTypeTitle(outputType)} has been ${isRegeneration ? "regenerated" : "generated"} successfully`,
-          type: "success",
+          title: isRegeneration
+            ? 'Regeneration complete'
+            : 'Processing complete',
+          description: `${getOutputTypeTitle(outputType)} has been ${
+            isRegeneration ? 'regenerated' : 'generated'
+          } successfully`,
+          type: 'success',
           duration: 3000,
         })
       } catch (error) {
@@ -140,12 +165,14 @@ export function OutputProvider({ children }: OutputProviderProps) {
         const errorMessage =
           error instanceof Error
             ? error.message
-            : `Failed to ${isRegeneration ? "regenerate" : "generate"} ${getOutputTypeTitle(outputType)}. Please try again.`
+            : `Failed to ${
+                isRegeneration ? 'regenerate' : 'generate'
+              } ${getOutputTypeTitle(outputType)}. Please try again.`
 
         // Track error in PostHog
         analytics.trackError(
-          isRegeneration ? "regeneration_failed" : "generation_failed",
-          `${outputType}: ${errorMessage}`,
+          isRegeneration ? 'regeneration_failed' : 'generation_failed',
+          `${outputType}: ${errorMessage}`
         )
 
         setState((prev) => ({
@@ -155,135 +182,178 @@ export function OutputProvider({ children }: OutputProviderProps) {
         }))
 
         toast({
-          title: "Processing failed",
+          title: 'Processing failed',
           description: errorMessage,
-          type: "error",
+          type: 'error',
           duration: 7000,
         })
       }
     },
-    [toast],
+    [toast]
   )
 
   const processMultipleOutputs = useCallback(
     async (fileAttachments: FileAttachment[]) => {
       if (fileAttachments.length === 0) {
-        analytics.trackError("no_files", "No files selected for processing")
+        analytics.trackError('no_files', 'No files selected for processing')
         toast({
-          title: "No files selected",
-          description: "Please upload at least one file to process",
-          type: "warning",
+          title: 'No files selected',
+          description: 'Please upload at least one file to process',
+          type: 'warning',
           duration: 3000,
         })
         return
       }
 
       // Track generation in PostHog
-      analytics.trackOutputGeneration("multiple", false)
+      analytics.trackOutputGeneration('multiple', false)
 
-      // Clear any previous errors and set processing state
+      // Initialize processing state atomically
       setState((prev) => ({
         ...prev,
         errors: {
-          shortSummary: null,
+          ...prev.errors,
           mediumSummary: null,
           howToGuide: null,
         },
         isProcessing: {
-          shortSummary: false,
+          ...prev.isProcessing,
           mediumSummary: true,
           howToGuide: true,
         },
       }))
 
-      let mediumSuccess = false
-      let howToSuccess = false
+      // Track results with state synchronization
+      const results = {
+        mediumSummary: { success: false, error: null as string | null },
+        howToGuide: { success: false, error: null as string | null },
+      }
 
-      try {
-        // Process medium summary
+      // Process medium summary with atomic state updates
+      const processMediumSummary = async () => {
         try {
-          const mediumResult = await processOutput(fileAttachments, "mediumSummary", false)
+          const mediumResult = await processOutput(
+            fileAttachments,
+            'mediumSummary',
+            false
+          )
 
+          // Update state atomically for medium summary success
           setState((prev) => ({
             ...prev,
             outputs: { ...prev.outputs, mediumSummary: mediumResult },
-            editedOutputs: { ...prev.editedOutputs, mediumSummary: "" },
+            editedOutputs: { ...prev.editedOutputs, mediumSummary: '' },
             isProcessing: { ...prev.isProcessing, mediumSummary: false },
-            retryCount: { ...prev.retryCount, mediumSummary: 0 }, // Reset retry count on success
+            retryCount: { ...prev.retryCount, mediumSummary: 0 },
+            errors: { ...prev.errors, mediumSummary: null },
           }))
 
-          mediumSuccess = true
+          results.mediumSummary.success = true
         } catch (mediumError) {
-          console.error("Error processing medium summary:", mediumError)
+          console.error('Error processing medium summary:', mediumError)
 
+          const errorMessage =
+            mediumError instanceof Error
+              ? mediumError.message
+              : 'Failed to generate medium summary'
+
+          // Update state atomically for medium summary error
           setState((prev) => ({
             ...prev,
-            errors: {
-              ...prev.errors,
-              mediumSummary: mediumError instanceof Error ? mediumError.message : "Failed to generate medium summary",
-            },
+            errors: { ...prev.errors, mediumSummary: errorMessage },
             isProcessing: { ...prev.isProcessing, mediumSummary: false },
           }))
+
+          results.mediumSummary.error = errorMessage
         }
+      }
 
-        // Process how-to guide
+      // Process how-to guide with atomic state updates
+      const processHowToGuide = async () => {
         try {
-          const howToResult = await processOutput(fileAttachments, "howToGuide", false)
+          const howToResult = await processOutput(
+            fileAttachments,
+            'howToGuide',
+            false
+          )
 
+          // Update state atomically for how-to guide success
           setState((prev) => ({
             ...prev,
             outputs: { ...prev.outputs, howToGuide: howToResult },
-            editedOutputs: { ...prev.editedOutputs, howToGuide: "" },
+            editedOutputs: { ...prev.editedOutputs, howToGuide: '' },
             isProcessing: { ...prev.isProcessing, howToGuide: false },
-            retryCount: { ...prev.retryCount, howToGuide: 0 }, // Reset retry count on success
+            retryCount: { ...prev.retryCount, howToGuide: 0 },
+            errors: { ...prev.errors, howToGuide: null },
           }))
 
-          howToSuccess = true
+          results.howToGuide.success = true
         } catch (howToError) {
-          console.error("Error processing how-to guide:", howToError)
+          console.error('Error processing how-to guide:', howToError)
 
+          const errorMessage =
+            howToError instanceof Error
+              ? howToError.message
+              : 'Failed to generate how-to guide'
+
+          // Update state atomically for how-to guide error
           setState((prev) => ({
             ...prev,
-            errors: {
-              ...prev.errors,
-              howToGuide: howToError instanceof Error ? howToError.message : "Failed to generate how-to guide",
-            },
+            errors: { ...prev.errors, howToGuide: errorMessage },
             isProcessing: { ...prev.isProcessing, howToGuide: false },
           }))
-        }
 
-        // Show appropriate toast based on results
-        if (mediumSuccess && howToSuccess) {
+          results.howToGuide.error = errorMessage
+        }
+      }
+
+      try {
+        // Process both outputs sequentially to avoid race conditions
+        await processMediumSummary()
+        await processHowToGuide()
+
+        // Show appropriate toast based on synchronized results
+        const successCount = Object.values(results).filter(
+          (r) => r.success
+        ).length
+        const totalCount = Object.keys(results).length
+
+        if (successCount === totalCount) {
           toast({
-            title: "Processing complete",
-            description: "All outputs have been generated successfully",
-            type: "success",
+            title: 'Processing complete',
+            description: 'All outputs have been generated successfully',
+            type: 'success',
             duration: 3000,
           })
-        } else if (mediumSuccess || howToSuccess) {
+        } else if (successCount > 0) {
           toast({
-            title: "Partial success",
-            description: "Some outputs were generated successfully, but others failed. See error messages for details.",
-            type: "warning",
+            title: 'Partial success',
+            description:
+              'Some outputs were generated successfully, but others failed. See error messages for details.',
+            type: 'warning',
             duration: 5000,
           })
         } else {
           toast({
-            title: "Processing failed",
-            description: "Failed to generate any outputs. Please try again.",
-            type: "error",
+            title: 'Processing failed',
+            description: 'Failed to generate any outputs. Please try again.',
+            type: 'error',
             duration: 7000,
           })
         }
       } catch (error) {
-        console.error(`Error processing outputs:`, error)
+        console.error('Unexpected error in processMultipleOutputs:', error)
 
-        // This catch block handles any unexpected errors not caught by the inner try/catch blocks
-        const errorMessage = error instanceof Error ? error.message : "Failed to generate outputs. Please try again."
+        // Handle any unexpected errors with atomic state cleanup
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : 'An unexpected error occurred during processing'
 
         // Track error in PostHog
-        analytics.trackError("generation_failed", errorMessage)
+        analytics.trackError('generation_failed', errorMessage)
 
+        // Ensure all processing states are cleared atomically
         setState((prev) => ({
           ...prev,
           isProcessing: {
@@ -294,14 +364,14 @@ export function OutputProvider({ children }: OutputProviderProps) {
         }))
 
         toast({
-          title: "Processing failed",
+          title: 'Processing failed',
           description: errorMessage,
-          type: "error",
+          type: 'error',
           duration: 7000,
         })
       }
     },
-    [toast],
+    [toast]
   )
 
   return (
@@ -323,12 +393,12 @@ export function OutputProvider({ children }: OutputProviderProps) {
 // Helper function to get the title for an output type
 export function getOutputTypeTitle(type: OutputType): string {
   switch (type) {
-    case "shortSummary":
-      return "Short Summary"
-    case "mediumSummary":
-      return "Medium Summary"
-    case "howToGuide":
-      return "How-to Guide"
+    case 'shortSummary':
+      return 'Short Summary'
+    case 'mediumSummary':
+      return 'Medium Summary'
+    case 'howToGuide':
+      return 'How-to Guide'
     default:
       return type
   }
