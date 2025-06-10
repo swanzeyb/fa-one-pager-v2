@@ -226,7 +226,7 @@ export function OutputContent() {
           size="lg"
           onClick={handleGenerate}
           disabled={isGenerating || files.length === 0}
-          className="w-full sm:w-2/3 py-6 text-lg"
+          className="w-full py-6 text-lg"
         >
           {isGenerating ? (
             <>
@@ -242,7 +242,7 @@ export function OutputContent() {
           mediumSummary={outputs.mediumSummary}
           howToGuide={outputs.howToGuide}
           disabled={isGenerating}
-          className="w-full sm:w-1/3 py-6 text-lg"
+          className="w-full py-6 text-lg"
           showProgress={true}
         />
       </div>
