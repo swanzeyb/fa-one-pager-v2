@@ -164,14 +164,14 @@ export function useDownload() {
         // Update progress
         updateState({ progress: 25 })
 
-        // Generate file based on format
+        // Generate file using unified document generator
         let dataUri: string
         try {
-          if (format === 'pdf') {
-            dataUri = await generatePDF(content, title)
-          } else {
-            dataUri = await generateDOCX(content, title)
-          }
+          // Import the unified document generator
+          const { generateUnifiedDocument } = await import(
+            '@/lib/document-generator'
+          )
+          dataUri = await generateUnifiedDocument(content, title, format)
         } catch (genError) {
           throw new Error(
             `Failed to generate ${format.toUpperCase()} file: ${
