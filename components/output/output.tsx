@@ -17,9 +17,6 @@ import { CombinedDownloadButton } from '@/components/unified-download-button'
 import type { OutputType, FileAttachment } from '@/app/actions'
 import type React from 'react'
 import { useState, useRef } from 'react'
-import { generateDOCX } from '@/app/actions'
-import { useToast } from '@/hooks/use-toast'
-import { analytics } from '@/lib/posthog'
 
 interface OutputProps {
   children: React.ReactNode
@@ -77,7 +74,6 @@ export function OutputContent() {
   } = useOutput()
   const { files, fileAttachments, prepareFileAttachments } = useFileUpload()
   const [editorContent, setEditorContent] = useState('')
-  const { toast } = useToast()
   const editorRef = useRef(null)
 
   const handleGenerate = async () => {
