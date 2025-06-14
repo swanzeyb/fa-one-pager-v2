@@ -11,6 +11,7 @@ import {
   HeadingLevel,
   PageBreak,
 } from 'docx'
+import { parse } from 'node-html-parser'
 import prompts from './prompts.json'
 
 export type OutputType = 'shortSummary' | 'mediumSummary' | 'howToGuide'
@@ -334,9 +335,8 @@ export async function generatePDF(content: string, title: string) {
 
 export async function generateDOCX(content: string, title: string) {
   try {
-    // Create a temporary DOM element to parse the HTML
-    const parser = new DOMParser()
-    const htmlDoc = parser.parseFromString(content, 'text/html')
+    // Parse the HTML content using node-html-parser
+    const htmlDoc = parse(content)
 
     // Create document with sections
     const docChildren = []
@@ -359,16 +359,18 @@ export async function generateDOCX(content: string, title: string) {
     )
 
     // Process each element in the HTML body
-    const elements = htmlDoc.body.childNodes
+    const bodyElement = htmlDoc.querySelector('body')
+    const elements = bodyElement ? bodyElement.childNodes : htmlDoc.childNodes
     let skipNextPageBreak = false
 
     for (let i = 0; i < elements.length; i++) {
-      const element = elements[i] as HTMLElement
+      const element = elements[i]
 
       // Handle page break divs
       if (
+        element.nodeType === 1 && // Element node
         element.tagName?.toLowerCase() === 'div' &&
-        element.style?.pageBreakBefore === 'always'
+        element.getAttribute('style')?.includes('page-break-before: always')
       ) {
         docChildren.push(new Paragraph({ children: [new PageBreak()] }))
         skipNextPageBreak = true
@@ -376,10 +378,10 @@ export async function generateDOCX(content: string, title: string) {
       }
 
       // Skip text nodes and non-element nodes
-      if (element.nodeType !== Node.ELEMENT_NODE) continue
+      if (element.nodeType !== 1) continue
 
       // Get the text content
-      const text = element.textContent || ''
+      const text = element.text || ''
       if (!text.trim()) continue
 
       // Apply styling based on tag type
@@ -447,9 +449,9 @@ export async function generateDOCX(content: string, title: string) {
         case 'ol':
         case 'ul':
           // Process list items
-          const listItems = element.getElementsByTagName('li')
+          const listItems = element.querySelectorAll('li')
           for (let j = 0; j < listItems.length; j++) {
-            const itemText = listItems[j].textContent || ''
+            const itemText = listItems[j].text || ''
 
             // Format based on list type
             const prefix =
