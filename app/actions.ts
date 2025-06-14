@@ -335,9 +335,9 @@ export async function generatePDF(content: string, title: string) {
 
 export async function generateDOCX(content: string, title: string) {
   try {
-    // Parse the HTML content using node-html-parser
-    const htmlDoc = parse(content)
-
+    // Handle multiple HTML documents by splitting on <html> tags
+    const htmlSections = content.split(/<html[^>]*>/i).filter(section => section.trim())
+    
     // Create document with sections
     const docChildren = []
 
@@ -358,150 +358,168 @@ export async function generateDOCX(content: string, title: string) {
       })
     )
 
-    // Process each element in the HTML body
-    const bodyElement = htmlDoc.querySelector('body')
-    const elements = bodyElement ? bodyElement.childNodes : htmlDoc.childNodes
     let skipNextPageBreak = false
 
-    for (let i = 0; i < elements.length; i++) {
-      const element = elements[i]
-
-      // Handle page break divs
-      if (
-        element.nodeType === 1 && // Element node
-        element.tagName?.toLowerCase() === 'div' &&
-        element.getAttribute('style')?.includes('page-break-before: always')
-      ) {
+    // Process each HTML section
+    for (let sectionIndex = 0; sectionIndex < htmlSections.length; sectionIndex++) {
+      let sectionContent = htmlSections[sectionIndex]
+      
+      // Clean up the section content - remove closing </html> tags
+      sectionContent = sectionContent.replace(/<\/html>/gi, '')
+      
+      // If this isn't the first section, add a page break
+      if (sectionIndex > 0) {
         docChildren.push(new Paragraph({ children: [new PageBreak()] }))
         skipNextPageBreak = true
-        continue
       }
 
-      // Skip text nodes and non-element nodes
-      if (element.nodeType !== 1) continue
+      // Parse the section content
+      const htmlDoc = parse(sectionContent)
 
-      // Get the text content
-      const text = element.text || ''
-      if (!text.trim()) continue
+      // Process each element in the HTML body or root
+      const bodyElement = htmlDoc.querySelector('body')
+      const elements = bodyElement ? bodyElement.childNodes : htmlDoc.childNodes
 
-      // Apply styling based on tag type
-      switch (element.tagName.toLowerCase()) {
-        case 'h1':
-          // Add a page break before new major sections (unless we just added one)
-          if (!skipNextPageBreak) {
-            docChildren.push(new Paragraph({ children: [new PageBreak()] }))
-          }
-          skipNextPageBreak = false
+      for (let i = 0; i < elements.length; i++) {
+        const element = elements[i] as any
 
-          docChildren.push(
-            new Paragraph({
-              heading: HeadingLevel.HEADING_1,
-              children: [
-                new TextRun({
-                  text: text,
-                  bold: true,
-                  size: 32,
-                }),
-              ],
-              spacing: {
-                after: 300,
-                before: 300,
-              },
-            })
-          )
-          break
+        // Handle page break divs
+        if (
+          element.nodeType === 1 && // Element node
+          element.tagName?.toLowerCase() === 'div' &&
+          element.getAttribute('style')?.includes('page-break-before: always')
+        ) {
+          docChildren.push(new Paragraph({ children: [new PageBreak()] }))
+          skipNextPageBreak = true
+          continue
+        }
 
-        case 'h2':
-          docChildren.push(
-            new Paragraph({
-              heading: HeadingLevel.HEADING_2,
-              children: [
-                new TextRun({
-                  text: text,
-                  bold: true,
-                  size: 28,
-                }),
-              ],
-              spacing: {
-                after: 200,
-                before: 200,
-              },
-            })
-          )
-          break
+        // Skip text nodes and non-element nodes
+        if (element.nodeType !== 1) continue
 
-        case 'p':
-          docChildren.push(
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: text,
-                  size: 24,
-                }),
-              ],
-              spacing: {
-                after: 120,
-              },
-            })
-          )
-          break
+        // Get the text content
+        const text = element.text || ''
+        if (!text.trim()) continue
 
-        case 'ol':
-        case 'ul':
-          // Process list items
-          const listItems = element.querySelectorAll('li')
-          for (let j = 0; j < listItems.length; j++) {
-            const itemText = listItems[j].text || ''
+        // Apply styling based on tag type
+        switch (element.tagName.toLowerCase()) {
+          case 'h1':
+            // Add a page break before new major sections (unless we just added one)
+            if (!skipNextPageBreak) {
+              docChildren.push(new Paragraph({ children: [new PageBreak()] }))
+            }
+            skipNextPageBreak = false
 
-            // Format based on list type
-            const prefix =
-              element.tagName.toLowerCase() === 'ol' ? `${j + 1}. ` : '• '
+            docChildren.push(
+              new Paragraph({
+                heading: HeadingLevel.HEADING_1,
+                children: [
+                  new TextRun({
+                    text: text,
+                    bold: true,
+                    size: 32,
+                  }),
+                ],
+                spacing: {
+                  after: 300,
+                  before: 300,
+                },
+              })
+            )
+            break
 
+          case 'h2':
+            docChildren.push(
+              new Paragraph({
+                heading: HeadingLevel.HEADING_2,
+                children: [
+                  new TextRun({
+                    text: text,
+                    bold: true,
+                    size: 28,
+                  }),
+                ],
+                spacing: {
+                  after: 200,
+                  before: 200,
+                },
+              })
+            )
+            break
+
+          case 'p':
             docChildren.push(
               new Paragraph({
                 children: [
                   new TextRun({
-                    text: prefix + itemText,
+                    text: text,
                     size: 24,
                   }),
                 ],
                 spacing: {
-                  after: 100,
-                },
-                indent: {
-                  left: 720, // 0.5 inches in twips (1440 twips = 1 inch)
+                  after: 120,
                 },
               })
             )
-          }
-          // Add extra space after list
-          docChildren.push(
-            new Paragraph({
-              children: [new TextRun({ text: '' })],
-              spacing: { after: 120 },
-            })
-          )
-          break
+            break
 
-        case 'li':
-          // Individual list items are handled within ol/ul processing
-          break
+          case 'ol':
+          case 'ul':
+            // Process list items
+            const listItems = element.querySelectorAll('li')
+            for (let j = 0; j < listItems.length; j++) {
+              const itemText = listItems[j].text || ''
 
-        default:
-          // Handle other elements as paragraphs
-          docChildren.push(
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: text,
-                  size: 24,
-                }),
-              ],
-              spacing: {
-                after: 120,
-              },
-            })
-          )
+              // Format based on list type
+              const prefix =
+                element.tagName.toLowerCase() === 'ol' ? `${j + 1}. ` : '• '
+
+              docChildren.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: prefix + itemText,
+                      size: 24,
+                    }),
+                  ],
+                  spacing: {
+                    after: 100,
+                  },
+                  indent: {
+                    left: 720, // 0.5 inches in twips (1440 twips = 1 inch)
+                  },
+                })
+              )
+            }
+            // Add extra space after list
+            docChildren.push(
+              new Paragraph({
+                children: [new TextRun({ text: '' })],
+                spacing: { after: 120 },
+              })
+            )
+            break
+
+          case 'li':
+            // Individual list items are handled within ol/ul processing
+            break
+
+          default:
+            // Handle other elements as paragraphs
+            docChildren.push(
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: text,
+                    size: 24,
+                  }),
+                ],
+                spacing: {
+                  after: 120,
+                },
+              })
+            )
+        }
       }
     }
 
