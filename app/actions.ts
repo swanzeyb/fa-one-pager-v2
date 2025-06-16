@@ -95,7 +95,7 @@ export async function processOutput(
           content:
             prompts[outputType].system +
             (isRegeneration
-              ? ' For this regeneration, provide a fresh perspective with different wording and structure than previous versions.'
+              ? ' Please make this regeneration noticeably different from previous versions.'
               : '') +
             (retryCount > 0
               ? ` This is attempt ${
@@ -336,8 +336,10 @@ export async function generatePDF(content: string, title: string) {
 export async function generateDOCX(content: string, title: string) {
   try {
     // Handle multiple HTML documents by splitting on <html> tags
-    const htmlSections = content.split(/<html[^>]*>/i).filter(section => section.trim())
-    
+    const htmlSections = content
+      .split(/<html[^>]*>/i)
+      .filter((section) => section.trim())
+
     // Create document with sections
     const docChildren = []
 
@@ -361,12 +363,16 @@ export async function generateDOCX(content: string, title: string) {
     let skipNextPageBreak = false
 
     // Process each HTML section
-    for (let sectionIndex = 0; sectionIndex < htmlSections.length; sectionIndex++) {
+    for (
+      let sectionIndex = 0;
+      sectionIndex < htmlSections.length;
+      sectionIndex++
+    ) {
       let sectionContent = htmlSections[sectionIndex]
-      
+
       // Clean up the section content - remove closing </html> tags
       sectionContent = sectionContent.replace(/<\/html>/gi, '')
-      
+
       // If this isn't the first section, add a page break
       if (sectionIndex > 0) {
         docChildren.push(new Paragraph({ children: [new PageBreak()] }))
