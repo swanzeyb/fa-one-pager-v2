@@ -47,10 +47,10 @@ function EditorWithActions({
   fileAttachments,
   disabled = false,
 }: {
-  outputType: OutputType;
-  title: string;
-  fileAttachments: any;
-  disabled?: boolean;
+  outputType: OutputType
+  title: string
+  fileAttachments: any
+  disabled?: boolean
 }) {
   const { htmlContent } = useSimpleEditor()
 
@@ -81,13 +81,12 @@ export function OutputContent() {
 
   const handleGenerate = async () => {
     const attachments = await prepareFileAttachments()
-    debugger
     processMultipleOutputs(attachments)
   }
 
   const handleRegenerate = async (outputType: OutputType) => {
     const attachments = await prepareFileAttachments()
-    processOutputType(outputType, attachments, true) // true indicates this is a regeneration
+    processOutputType(outputType, attachments, true)
   }
 
   const handleEditorChange = (content: string, outputType: OutputType) => {
@@ -235,7 +234,9 @@ export function OutputContent() {
                   <RefreshCw className="h-4 w-4 mr-1" />
                 )}
                 Regenerate{' '}
-                {outputType === 'howToGuide' ? 'How-to Guide' : 'Medium Summary'}
+                {outputType === 'howToGuide'
+                  ? 'How-to Guide'
+                  : 'Medium Summary'}
               </Button>
             </div>
           </div>
