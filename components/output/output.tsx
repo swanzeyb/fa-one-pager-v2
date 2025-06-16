@@ -19,6 +19,7 @@ import { useState, useRef } from 'react'
 import { generateDOCX } from '@/app/actions'
 import { useToast } from '@/hooks/use-toast'
 import { analytics } from '@/lib/posthog'
+import { PanelFooter } from './panel-footer'
 
 interface OutputProps {
   children: React.ReactNode
@@ -45,6 +46,11 @@ function EditorWithActions({
   title,
   fileAttachments,
   disabled = false,
+}: {
+  outputType: OutputType;
+  title: string;
+  fileAttachments: any;
+  disabled?: boolean;
 }) {
   const { htmlContent } = useSimpleEditor()
 
@@ -212,23 +218,26 @@ export function OutputContent() {
             <EditorContent />
           </SimpleEditor>
 
-          {/* Add regenerate button at the bottom of the content */}
-          <div className="p-3 border-t bg-gray-50 flex justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleRegenerate(outputType)}
-              disabled={isProcessing[outputType]}
-              className="flex items-center gap-1"
-            >
-              {isProcessing[outputType] ? (
-                <Spinner className="h-4 w-4 mr-1" />
-              ) : (
-                <RefreshCw className="h-4 w-4 mr-1" />
-              )}
-              Regenerate{' '}
-              {outputType === 'howToGuide' ? 'How-to Guide' : 'Medium Summary'}
-            </Button>
+          {/* Add footer with both send and regenerate buttons */}
+          <div className="border-t bg-gray-50 flex justify-between items-center">
+            <PanelFooter className="border-t-0 bg-transparent" />
+            <div className="p-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleRegenerate(outputType)}
+                disabled={isProcessing[outputType]}
+                className="flex items-center gap-1"
+              >
+                {isProcessing[outputType] ? (
+                  <Spinner className="h-4 w-4 mr-1" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                )}
+                Regenerate{' '}
+                {outputType === 'howToGuide' ? 'How-to Guide' : 'Medium Summary'}
+              </Button>
+            </div>
           </div>
         </div>
       )
