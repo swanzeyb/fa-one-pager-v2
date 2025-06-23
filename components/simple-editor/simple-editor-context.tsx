@@ -112,29 +112,99 @@ export function SimpleEditorProvider({
     ) {
       let newHtmlContent = editorRef.current.innerHTML
 
+      // Store current selection for restoration
+      const selection = window.getSelection()
+      const range = selection?.rangeCount ? selection.getRangeAt(0) : null
+      let selectionContainer: Node | null = null
+      let selectionOffset = 0
+
+      if (range && range.startContainer) {
+        selectionContainer = range.startContainer
+        selectionOffset = range.startOffset
+      }
+
       // Fix empty paragraphs by adding <br> tags to make them visible
       newHtmlContent = newHtmlContent.replace(/<p><\/p>/g, '<p><br></p>')
       newHtmlContent = newHtmlContent.replace(/<p>\s*<\/p>/g, '<p><br></p>')
 
+      // Fix empty headings
+      newHtmlContent = newHtmlContent.replace(
+        /<h([1-6])><\/h[1-6]>/g,
+        '<h$1><br></h$1>'
+      )
+      newHtmlContent = newHtmlContent.replace(
+        /<h([1-6])>\s*<\/h[1-6]>/g,
+        '<h$1><br></h$1>'
+      )
+
+      // Remove any completely empty divs that might have been created
+      newHtmlContent = newHtmlContent.replace(/<div><\/div>/g, '')
+      newHtmlContent = newHtmlContent.replace(/<div>\s*<\/div>/g, '')
+
+      // Ensure we always have at least one paragraph
+      if (!newHtmlContent.trim() || newHtmlContent.trim() === '<br>') {
+        newHtmlContent = '<p><br></p>'
+      }
+
       // Update the editor content if we made changes
       if (newHtmlContent !== editorRef.current.innerHTML) {
-        const selection = window.getSelection()
-        const range = selection?.rangeCount ? selection.getRangeAt(0) : null
-
         editorRef.current.innerHTML = newHtmlContent
 
         // Restore cursor position if possible
-        if (range && selection) {
+        if (selectionContainer && selection) {
           try {
-            selection.removeAllRanges()
-            selection.addRange(range)
+            // Try to find the same container in the updated DOM
+            const walker = document.createTreeWalker(
+              editorRef.current,
+              NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT,
+              null
+            )
+
+            let node: Node | null = null
+            let foundContainer = false
+
+            while ((node = walker.nextNode())) {
+              if (
+                node === selectionContainer ||
+                (node.nodeType === Node.TEXT_NODE &&
+                  selectionContainer.nodeType === Node.TEXT_NODE &&
+                  node.textContent === selectionContainer.textContent)
+              ) {
+                const newRange = document.createRange()
+                const maxOffset =
+                  node.nodeType === Node.TEXT_NODE
+                    ? node.textContent?.length || 0
+                    : node.childNodes.length
+
+                newRange.setStart(node, Math.min(selectionOffset, maxOffset))
+                newRange.collapse(true)
+                selection.removeAllRanges()
+                selection.addRange(newRange)
+                foundContainer = true
+                break
+              }
+            }
+
+            if (!foundContainer) {
+              // Fallback: place cursor at the end
+              const newRange = document.createRange()
+              newRange.selectNodeContents(editorRef.current)
+              newRange.collapse(false)
+              selection.removeAllRanges()
+              selection.addRange(newRange)
+            }
           } catch (error) {
             // If restoring selection fails, just focus at the end
-            const newRange = document.createRange()
-            newRange.selectNodeContents(editorRef.current)
-            newRange.collapse(false)
-            selection.removeAllRanges()
-            selection.addRange(newRange)
+            try {
+              const newRange = document.createRange()
+              newRange.selectNodeContents(editorRef.current)
+              newRange.collapse(false)
+              selection.removeAllRanges()
+              selection.addRange(newRange)
+            } catch (fallbackError) {
+              // Final fallback - just focus the editor
+              editorRef.current.focus()
+            }
           }
         }
       }
