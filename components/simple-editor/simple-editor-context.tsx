@@ -1,28 +1,42 @@
-"use client"
+'use client'
 
-import type React from "react"
+import type React from 'react'
 
-import { createContext, useContext, useState, useRef, useEffect, type ReactNode } from "react"
-import { useImageUpload } from "../image-upload-context"
-import { parseHtmlToStructure, type StructuredElement } from "@/utils/html-parser"
+import {
+  createContext,
+  useContext,
+  useState,
+  useRef,
+  useEffect,
+  type ReactNode,
+} from 'react'
+import { useImageUpload } from '../image-upload-context'
+import {
+  parseHtmlToStructure,
+  type StructuredElement,
+} from '@/utils/html-parser'
 
 interface SimpleEditorContextType {
   content: string
   htmlContent: string
   structuredContent: StructuredElement[]
-  editorRef: React.RefObject<HTMLDivElement>
+  editorRef: React.RefObject<HTMLDivElement | null>
   isReadOnly: boolean
   updateContent: (newContent: string) => void
   formatText: (command: string, value?: string) => void
   handleContentChange: () => void
 }
 
-const SimpleEditorContext = createContext<SimpleEditorContextType | undefined>(undefined)
+const SimpleEditorContext = createContext<SimpleEditorContextType | undefined>(
+  undefined
+)
 
 export function useSimpleEditor() {
   const context = useContext(SimpleEditorContext)
   if (context === undefined) {
-    throw new Error("useSimpleEditor must be used within a SimpleEditorProvider")
+    throw new Error(
+      'useSimpleEditor must be used within a SimpleEditorProvider'
+    )
   }
   return context
 }
@@ -43,8 +57,10 @@ export function SimpleEditorProvider({
   forwardedRef,
 }: SimpleEditorProviderProps) {
   const [content, setContent] = useState(initialContent)
-  const [htmlContent, setHtmlContent] = useState("")
-  const [structuredContent, setStructuredContent] = useState<StructuredElement[]>([])
+  const [htmlContent, setHtmlContent] = useState('')
+  const [structuredContent, setStructuredContent] = useState<
+    StructuredElement[]
+  >([])
   const internalEditorRef = useRef<HTMLDivElement>(null)
   const editorRef = forwardedRef || internalEditorRef
   const { getAllImages } = useImageUpload()
@@ -57,8 +73,11 @@ export function SimpleEditorProvider({
     // Replace placeholder images with actual images if needed
     const images = getAllImages()
     Object.entries(images).forEach(([key, dataUrl]) => {
-      const imgKey = key.replace("img-", "")
-      const regex = new RegExp(`/placeholder\\.svg\\?.*?query=${imgKey}.*?`, "g")
+      const imgKey = key.replace('img-', '')
+      const regex = new RegExp(
+        `/placeholder\\.svg\\?.*?query=${imgKey}.*?`,
+        'g'
+      )
       processedHtml = processedHtml.replace(regex, dataUrl)
     })
 
@@ -70,18 +89,56 @@ export function SimpleEditorProvider({
       const structured = parseHtmlToStructure(processedHtml)
       setStructuredContent(structured)
     } catch (error) {
-      console.error("Error parsing HTML to structure:", error)
+      console.error('Error parsing HTML to structure:', error)
       setStructuredContent([])
     }
 
-    if (typeof editorRef === "object" && editorRef && "current" in editorRef && editorRef.current) {
+    if (
+      typeof editorRef === 'object' &&
+      editorRef &&
+      'current' in editorRef &&
+      editorRef.current
+    ) {
       editorRef.current.innerHTML = processedHtml
     }
   }, [initialContent, getAllImages, editorRef])
 
   const handleContentChange = () => {
-    if (typeof editorRef === "object" && editorRef && "current" in editorRef && editorRef.current) {
-      const newHtmlContent = editorRef.current.innerHTML
+    if (
+      typeof editorRef === 'object' &&
+      editorRef &&
+      'current' in editorRef &&
+      editorRef.current
+    ) {
+      let newHtmlContent = editorRef.current.innerHTML
+
+      // Fix empty paragraphs by adding <br> tags to make them visible
+      newHtmlContent = newHtmlContent.replace(/<p><\/p>/g, '<p><br></p>')
+      newHtmlContent = newHtmlContent.replace(/<p>\s*<\/p>/g, '<p><br></p>')
+
+      // Update the editor content if we made changes
+      if (newHtmlContent !== editorRef.current.innerHTML) {
+        const selection = window.getSelection()
+        const range = selection?.rangeCount ? selection.getRangeAt(0) : null
+
+        editorRef.current.innerHTML = newHtmlContent
+
+        // Restore cursor position if possible
+        if (range && selection) {
+          try {
+            selection.removeAllRanges()
+            selection.addRange(range)
+          } catch (error) {
+            // If restoring selection fails, just focus at the end
+            const newRange = document.createRange()
+            newRange.selectNodeContents(editorRef.current)
+            newRange.collapse(false)
+            selection.removeAllRanges()
+            selection.addRange(newRange)
+          }
+        }
+      }
+
       setHtmlContent(newHtmlContent)
 
       // Parse the HTML to structured content
@@ -89,7 +146,7 @@ export function SimpleEditorProvider({
         const structured = parseHtmlToStructure(newHtmlContent)
         setStructuredContent(structured)
       } catch (error) {
-        console.error("Error parsing HTML to structure:", error)
+        console.error('Error parsing HTML to structure:', error)
       }
 
       if (onChange) {
@@ -109,7 +166,7 @@ export function SimpleEditorProvider({
     if (readOnly) return
 
     // Special handling for certain commands
-    if (command === "formatBlock" && value === "h2") {
+    if (command === 'formatBlock' && value === 'h2') {
       // First check if we're already in an h1 or h2
       const selection = window.getSelection()
       if (selection && selection.rangeCount > 0) {
@@ -117,14 +174,20 @@ export function SimpleEditorProvider({
         const parentElement = range.commonAncestorContainer.parentElement
 
         // If we're in an h1 or h2, we need to handle this differently
-        if (parentElement && (parentElement.tagName === "H1" || parentElement.tagName === "H2")) {
+        if (
+          parentElement &&
+          (parentElement.tagName === 'H1' || parentElement.tagName === 'H2')
+        ) {
           // Create a new paragraph after the heading
-          const newParagraph = document.createElement("p")
-          newParagraph.innerHTML = "<br>"
+          const newParagraph = document.createElement('p')
+          newParagraph.innerHTML = '<br>'
 
           // Insert it after the heading
           if (parentElement.nextSibling) {
-            parentElement.parentNode?.insertBefore(newParagraph, parentElement.nextSibling)
+            parentElement.parentNode?.insertBefore(
+              newParagraph,
+              parentElement.nextSibling
+            )
           } else {
             parentElement.parentNode?.appendChild(newParagraph)
           }
@@ -150,12 +213,19 @@ export function SimpleEditorProvider({
     content,
     htmlContent,
     structuredContent,
-    editorRef: typeof editorRef === "object" && editorRef && "current" in editorRef ? editorRef : internalEditorRef,
+    editorRef:
+      typeof editorRef === 'object' && editorRef && 'current' in editorRef
+        ? editorRef
+        : internalEditorRef,
     isReadOnly: readOnly,
     updateContent,
     formatText,
     handleContentChange,
   }
 
-  return <SimpleEditorContext.Provider value={value}>{children}</SimpleEditorContext.Provider>
+  return (
+    <SimpleEditorContext.Provider value={value}>
+      {children}
+    </SimpleEditorContext.Provider>
+  )
 }

@@ -1,8 +1,8 @@
-"use client"
+'use client'
 
-import type { ReactNode } from "react"
-import { forwardRef } from "react"
-import { SimpleEditorProvider } from "./simple-editor-context"
+import type { ReactNode } from 'react'
+import { forwardRef } from 'react'
+import { SimpleEditorProvider } from './simple-editor-context'
 
 interface SimpleEditorProps {
   content: string
@@ -14,8 +14,15 @@ interface SimpleEditorProps {
 export const SimpleEditor = forwardRef<HTMLDivElement, SimpleEditorProps>(
   ({ content, onChange, readOnly = false, children }, ref) => {
     return (
-      <SimpleEditorProvider initialContent={content} onChange={onChange} readOnly={readOnly} forwardedRef={ref}>
-        <div className="simple-editor border-t overflow-hidden flex-grow">{children}</div>
+      <SimpleEditorProvider
+        initialContent={content}
+        onChange={onChange}
+        readOnly={readOnly}
+        forwardedRef={ref}
+      >
+        <div className="simple-editor border-t overflow-hidden flex-grow">
+          {children}
+        </div>
         <style jsx global>{`
           .simple-editor h1 {
             font-size: 1.5rem;
@@ -38,6 +45,11 @@ export const SimpleEditor = forwardRef<HTMLDivElement, SimpleEditorProps>(
           .simple-editor p {
             margin-bottom: 0.75rem;
             margin-top: 0;
+            min-height: 1.2em;
+          }
+          .simple-editor p:empty::before {
+            content: '\\x00a0';
+            opacity: 0;
           }
           .simple-editor ul {
             list-style-type: disc;
@@ -72,13 +84,13 @@ export const SimpleEditor = forwardRef<HTMLDivElement, SimpleEditorProps>(
           }
           .simple-editor br {
             display: block;
-            content: "";
+            content: '';
             margin-top: 0.25rem;
           }
         `}</style>
       </SimpleEditorProvider>
     )
-  },
+  }
 )
 
-SimpleEditor.displayName = "SimpleEditor"
+SimpleEditor.displayName = 'SimpleEditor'
