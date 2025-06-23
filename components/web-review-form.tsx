@@ -1,33 +1,36 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import { Send } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useToast } from "@/hooks/use-toast"
-import { analytics } from "@/lib/posthog"
+import { useState } from 'react'
+import { Send } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useToast } from '@/hooks/use-toast'
+import { analytics } from '@/lib/posthog'
 
 interface WebReviewFormProps {
   className?: string
   disabled?: boolean
 }
 
-export function WebReviewForm({ className = "", disabled = false }: WebReviewFormProps) {
+export function WebReviewForm({
+  className = '',
+  disabled = false,
+}: WebReviewFormProps) {
   const { toast } = useToast()
-  const [primaryAuthor, setPrimaryAuthor] = useState("")
-  const [secondaryAuthors, setSecondaryAuthors] = useState("")
+  const [primaryAuthor, setPrimaryAuthor] = useState('')
+  const [secondaryAuthors, setSecondaryAuthors] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!primaryAuthor.trim()) {
       toast({
-        title: "Primary Author Required",
-        description: "Please enter a primary author before sending for review.",
-        type: "warning",
+        title: 'Primary Author Required',
+        description: 'Please enter a primary author before sending for review.',
+        type: 'warning',
         duration: 3000,
       })
       return
@@ -37,34 +40,36 @@ export function WebReviewForm({ className = "", disabled = false }: WebReviewFor
 
     try {
       // Track form submission in PostHog
-      analytics.trackSend("web_review")
+      analytics.trackSend('web_review')
 
       // Simulate form submission (replace with actual implementation)
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
       toast({
-        title: "Sent for web review",
-        description: "Your content has been submitted for web review successfully.",
-        type: "success",
+        title: 'Sent for web review',
+        description:
+          'Your content has been submitted for web review successfully.',
+        type: 'success',
         duration: 3000,
       })
 
       // Reset form
-      setPrimaryAuthor("")
-      setSecondaryAuthors("")
+      setPrimaryAuthor('')
+      setSecondaryAuthors('')
     } catch (error) {
-      console.error("Error submitting for web review:", error)
+      console.error('Error submitting for web review:', error)
 
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : "Failed to submit for web review. Please try again."
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to submit for web review. Please try again.'
 
-      analytics.trackError("web_review_submit_failed", errorMessage)
+      analytics.trackError('web_review_submit_failed', errorMessage)
 
       toast({
-        title: "Submission failed",
+        title: 'Submission failed',
         description: errorMessage,
-        type: "error",
+        type: 'error',
         duration: 5000,
       })
     } finally {
@@ -91,7 +96,7 @@ export function WebReviewForm({ className = "", disabled = false }: WebReviewFor
               required
             />
           </div>
-          
+
           <div>
             <Label htmlFor="secondary-authors">Secondary Authors</Label>
             <Input
@@ -110,7 +115,7 @@ export function WebReviewForm({ className = "", disabled = false }: WebReviewFor
             disabled={disabled || isSubmitting || !primaryAuthor.trim()}
           >
             <Send className="h-4 w-4 mr-2" />
-            {isSubmitting ? "Sending..." : "Send for web review"}
+            {isSubmitting ? 'Sending...' : 'Send for web review'}
           </Button>
         </form>
       </CardContent>

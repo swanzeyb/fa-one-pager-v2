@@ -1,12 +1,18 @@
-"use client"
+'use client'
 
-import type React from "react"
-import { Upload, FileText, FileType, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { useFileUpload } from "./file-upload-context"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import type React from 'react'
+import { Upload, FileText, FileType, Trash2, Info } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { useFileUpload } from './file-upload-context'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface FileUploadProps {
   children: React.ReactNode
@@ -18,7 +24,9 @@ export function FileUpload({ children }: FileUploadProps) {
       <CardHeader>
         <CardTitle>File Upload</CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col h-[calc(100%-4rem)]">{children}</CardContent>
+      <CardContent className="flex flex-col h-[calc(100%-4rem)]">
+        {children}
+      </CardContent>
     </Card>
   )
 }
@@ -53,39 +61,56 @@ export function FileUploadArea() {
   }
 
   return (
-    <div
-      className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center h-64 mb-4 transition-colors ${
-        isDragging ? "border-primary bg-primary/10" : "border-muted-foreground/25"
-      }`}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      <Upload className="h-10 w-10 text-muted-foreground mb-2" />
-      <p className="text-sm text-muted-foreground text-center mb-2">Drag and drop files here or click to browse</p>
-      <p className="text-xs text-muted-foreground text-center mb-4">Supported file types</p>
-      <div className="flex gap-2 mb-2">
-        <div className="flex items-center text-xs bg-slate-100 px-2 py-1 rounded">
-          <FileText className="h-3 w-3 mr-1" />
-          PDF
-        </div>
-        <div className="flex items-center text-xs bg-slate-100 px-2 py-1 rounded">
-          <FileType className="h-3 w-3 mr-1" />
-          TXT
-        </div>
+    <>
+      <div
+        className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center h-64 mb-4 transition-colors ${
+          isDragging
+            ? 'border-primary bg-primary/10'
+            : 'border-muted-foreground/25'
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <Upload className="h-10 w-10 text-muted-foreground mb-2" />
+        <p className="text-sm text-muted-foreground text-center mb-2">
+          Drag and drop files here or click to browse
+        </p>
+        <p className="text-xs text-muted-foreground text-center mb-4">
+          Supported file types
+        </p>
+        <input
+          type="file"
+          id="file-upload"
+          multiple
+          className="hidden"
+          onChange={handleFileChange}
+          accept=".pdf,.txt,application/pdf,text/plain"
+        />
+        <Button
+          variant="outline"
+          onClick={() => document.getElementById('file-upload')?.click()}
+        >
+          Select Files
+        </Button>
       </div>
-      <input
-        type="file"
-        id="file-upload"
-        multiple
-        className="hidden"
-        onChange={handleFileChange}
-        accept=".pdf,.txt,application/pdf,text/plain"
-      />
-      <Button variant="outline" onClick={() => document.getElementById("file-upload")?.click()}>
-        Select Files
-      </Button>
-    </div>
+
+      {/* File Limits Information */}
+      <Alert className="mb-4">
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <div className="space-y-1 text-xs">
+            <div className="font-medium">File Limits:</div>
+            <div>• Max 3,000 files</div>
+            <div>• Max 1,000 pages per file</div>
+            <div>• Max 50 MB per file</div>
+            <div className="mt-2">
+              <span className="font-medium">Supported formats:</span> PDF, TXT
+            </div>
+          </div>
+        </AlertDescription>
+      </Alert>
+    </>
   )
 }
 
@@ -97,7 +122,9 @@ export function FileList() {
       <h3 className="text-sm font-medium mb-2">Uploaded Files</h3>
       <ScrollArea className="flex-grow mb-8">
         {files.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">No files uploaded yet</p>
+          <p className="text-sm text-muted-foreground text-center py-4">
+            No files uploaded yet
+          </p>
         ) : (
           <ul className="space-y-2">
             {files.map((file, index) => (
@@ -109,7 +136,7 @@ export function FileList() {
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <div className="flex items-center max-w-[75%]">
-                        {file.type === "application/pdf" ? (
+                        {file.type === 'application/pdf' ? (
                           <FileText className="h-4 w-4 min-w-4 mr-2 text-red-500" />
                         ) : (
                           <FileType className="h-4 w-4 min-w-4 mr-2 text-blue-500" />
@@ -117,7 +144,10 @@ export function FileList() {
                         <span className="truncate">{file.name}</span>
                       </div>
                     </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[300px] break-words">
+                    <TooltipContent
+                      side="top"
+                      className="max-w-[300px] break-words"
+                    >
                       {file.name}
                     </TooltipContent>
                   </Tooltip>

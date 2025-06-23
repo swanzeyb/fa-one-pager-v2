@@ -290,12 +290,7 @@ export function OutputContent() {
       </div>
 
       {/* Web Review Form - Only show if we have content */}
-      {hasContent && (
-        <WebReviewForm 
-          className="mt-4"
-          disabled={isGenerating}
-        />
-      )}
+      {hasContent && <WebReviewForm className="mt-4" disabled={isGenerating} />}
     </div>
   )
 }
