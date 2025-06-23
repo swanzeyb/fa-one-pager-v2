@@ -4,7 +4,7 @@ import { AlertCircle, Download, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/spinner'
-import { OutputActions } from '@/components/output-actions'
+
 import { OutputProvider, useOutput } from './output-context'
 import { useFileUpload } from '../file-upload/file-upload-context'
 import {
@@ -19,7 +19,7 @@ import { useState, useRef } from 'react'
 import { generateDOCX } from '@/app/actions'
 import { useToast } from '@/hooks/use-toast'
 import { analytics } from '@/lib/posthog'
-import { PanelFooter } from './panel-footer'
+import { WebReviewForm } from '@/components/web-review-form'
 
 interface OutputProps {
   children: React.ReactNode
@@ -37,31 +37,6 @@ export function Output({ children }: OutputProps) {
         </CardContent>
       </Card>
     </OutputProvider>
-  )
-}
-
-// Create a wrapper component to access the editor context
-function EditorWithActions({
-  outputType,
-  title,
-  fileAttachments,
-  disabled = false,
-}: {
-  outputType: OutputType
-  title: string
-  fileAttachments: any
-  disabled?: boolean
-}) {
-  const { htmlContent } = useSimpleEditor()
-
-  return (
-    <OutputActions
-      content={htmlContent}
-      title={title}
-      outputType={outputType}
-      fileAttachments={fileAttachments}
-      disabled={disabled}
-    />
   )
 }
 
@@ -217,9 +192,8 @@ export function OutputContent() {
             <EditorContent />
           </SimpleEditor>
 
-          {/* Add footer with both send and regenerate buttons */}
-          <div className="border-t bg-gray-50 flex justify-between items-center">
-            <PanelFooter className="border-t-0 bg-transparent" />
+          {/* Remove the footer with send button from individual panels */}
+          <div className="border-t bg-gray-50 p-3 flex justify-end">
             <div className="p-3">
               <Button
                 variant="outline"
@@ -314,6 +288,14 @@ export function OutputContent() {
         </div>
         <div className="flex-grow">{renderOutputSection('howToGuide')}</div>
       </div>
+
+      {/* Web Review Form - Only show if we have content */}
+      {hasContent && (
+        <WebReviewForm 
+          className="mt-4"
+          disabled={isGenerating}
+        />
+      )}
     </div>
   )
 }
