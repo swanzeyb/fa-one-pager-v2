@@ -20,9 +20,8 @@ interface FileUploadProps {
 }
 
 export function FileUpload({ children }: FileUploadProps) {
-  const { currentStep, isStepComplete } = useStepTracker()
+  const { currentStep } = useStepTracker()
   const isCurrentStep = currentStep === 1
-  const isComplete = isStepComplete(1)
 
   return (
     <Card className="h-full">
@@ -49,9 +48,8 @@ export function FileUpload({ children }: FileUploadProps) {
 
 export function FileUploadArea() {
   const { isDragging, setIsDragging, addFiles } = useFileUpload()
-  const { currentStep, isStepComplete } = useStepTracker()
+  const { currentStep } = useStepTracker()
   const isCurrentStep = currentStep === 1
-  const isComplete = isStepComplete(1)
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
