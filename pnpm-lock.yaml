@@ -98,6 +98,9 @@ importers:
       '@rrweb/types':
         specifier: latest
         version: 2.0.0-alpha.18
+      '@types/nodemailer':
+        specifier: ^6.4.17
+        version: 6.4.17
       ai:
         specifier: latest
         version: 4.3.16(react@19.0.0)(zod@3.24.1)
@@ -140,6 +143,9 @@ importers:
       node-html-parser:
         specifier: ^7.0.1
         version: 7.0.1
+      nodemailer:
+        specifier: ^7.0.4
+        version: 7.0.4
       posthog-js:
         specifier: latest
         version: 1.249.4(@rrweb/types@2.0.0-alpha.18)(rrweb-snapshot@2.0.0-alpha.4)
@@ -1337,6 +1343,9 @@ packages:
   '@types/node@22.15.30':
     resolution: {integrity: sha512-6Q7lr06bEHdlfplU6YRbgG1SFBdlsfNC4/lX+SkhiTs0cpJkOElmWls8PxDFv4yY/xKb8Y6SO0OmSX4wgqTZbA==}
 
+  '@types/nodemailer@6.4.17':
+    resolution: {integrity: sha512-I9CCaIp6DTldEg7vyUTZi8+9Vo0hi1/T8gv3C89yk1rSAAzoKQ8H8ki/jBYJSFoH/BisgLP8tkZMlQ91CIquww==}
+
   '@types/raf@3.4.3':
     resolution: {integrity: sha512-c4YAvMedbPZ5tEyxzQdMoOhhJ4RD3rngZIdwC2/qDN3d7JpEhB6fiBRKVY1lg5B7Wk+uPBjn5f39j1/2MY1oOw==}
 
@@ -2099,6 +2108,10 @@ packages:
 
   node-releases@2.0.19:
     resolution: {integrity: sha512-xxOWJsBKtzAq7DY0J+DTzuz58K8e7sJbdgwkbMWQe8UYB6ekmsQ45q0M/tJDsGaZmbC+l7n57UV8Hl5tHxO9uw==}
+
+  nodemailer@7.0.4:
+    resolution: {integrity: sha512-9O00Vh89/Ld2EcVCqJ/etd7u20UhME0f/NToPfArwPEe1Don1zy4mAIz6ariRr7mJ2RDxtaDzN0WJVdVXPtZaw==}
+    engines: {node: '>=6.0.0'}
 
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
@@ -3739,6 +3752,10 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
+  '@types/nodemailer@6.4.17':
+    dependencies:
+      '@types/node': 22.15.30
+
   '@types/raf@3.4.3':
     optional: true
 
@@ -4706,6 +4723,8 @@ snapshots:
       he: 1.2.0
 
   node-releases@2.0.19: {}
+
+  nodemailer@7.0.4: {}
 
   normalize-path@3.0.0: {}
 

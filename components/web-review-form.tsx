@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { analytics } from '@/lib/posthog'
+import { useOutput } from './output/output-context'
+import { generateDOCX } from '@/app/actions'
 
 interface WebReviewFormProps {
   className?: string
@@ -19,6 +21,7 @@ export function WebReviewForm({
   disabled = false,
 }: WebReviewFormProps) {
   const { toast } = useToast()
+  const { outputs } = useOutput()
   const [primaryAuthor, setPrimaryAuthor] = useState('')
   const [secondaryAuthors, setSecondaryAuthors] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -36,26 +39,93 @@ export function WebReviewForm({
       return
     }
 
+    // Check if we have content to send
+    if (!outputs.mediumSummary && !outputs.howToGuide) {
+      toast({
+        title: 'No content to send',
+        description: 'Please generate content first before sending for review.',
+        type: 'warning',
+        duration: 3000,
+      })
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
       // Track form submission in PostHog
       analytics.trackSend('web_review')
 
-      // Simulate form submission (replace with actual implementation)
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      toast({
-        title: 'Sent for web review',
-        description:
-          'Your content has been submitted for web review successfully.',
-        type: 'success',
-        duration: 3000,
+      // Get the current date for the document title
+      const currentDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
       })
 
-      // Reset form
-      setPrimaryAuthor('')
-      setSecondaryAuthors('')
+      // Create a properly structured combined document
+      let combinedContent = ''
+
+      // Add medium summary if available
+      if (outputs.mediumSummary) {
+        combinedContent += outputs.mediumSummary
+      }
+
+      // Add a page break and how-to guide if available
+      if (outputs.howToGuide) {
+        // Add a page break between sections
+        combinedContent += '<div style="page-break-before: always;"></div>'
+
+        // If the how-to guide doesn't start with a heading, add one
+        if (!outputs.howToGuide.includes('<h1>')) {
+          combinedContent += '<h1>How-to Guide</h1>'
+        }
+
+        combinedContent += outputs.howToGuide
+      }
+
+      // Generate the DOCX with a proper title including author info
+      const documentTitle = `Research Summary - ${currentDate} - ${primaryAuthor}`
+      const dataUri = await generateDOCX(combinedContent, documentTitle)
+
+      // Convert data URI to Blob
+      const response = await fetch(dataUri)
+      const blob = await response.blob()
+
+      // Create File object
+      const filename = `research-summary-${currentDate
+        .toLowerCase()
+        .replace(/\s+/g, '-')}.docx`
+      const file = new File([blob], filename, {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      })
+
+      // Send to API
+      const form = new FormData()
+      form.append('file', file)
+
+      const apiResponse = await fetch('/api/send-mail', {
+        method: 'POST',
+        body: form,
+      })
+
+      const result = await apiResponse.json()
+
+      if (result.status === 'success') {
+        toast({
+          title: 'Sent for web review',
+          description:
+            'Your content has been submitted for web review successfully.',
+          type: 'success',
+          duration: 3000,
+        })
+
+        // Reset form
+        setPrimaryAuthor('')
+        setSecondaryAuthors('')
+      } else {
+        throw new Error(result.error || 'Unknown error occurred')
+      }
     } catch (error) {
       console.error('Error submitting for web review:', error)
 
@@ -112,7 +182,12 @@ export function WebReviewForm({
           <Button
             type="submit"
             className="w-full"
-            disabled={disabled || isSubmitting || !primaryAuthor.trim()}
+            disabled={
+              disabled ||
+              isSubmitting ||
+              !primaryAuthor.trim() ||
+              (!outputs.mediumSummary && !outputs.howToGuide)
+            }
           >
             <Send className="h-4 w-4 mr-2" />
             {isSubmitting ? 'Sending...' : 'Send for web review'}
