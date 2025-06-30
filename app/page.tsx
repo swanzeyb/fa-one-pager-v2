@@ -77,7 +77,7 @@ function AppContent() {
 
       <div className="flex flex-col lg:flex-row flex-1">
         {/* Left Column - File Upload Area */}
-        <div className="w-full lg:w-1/3 p-4">
+        <div className="w-full lg:w-1/3 p-4 pr-2">
           <FileUpload>
             <FileUploadArea />
             <FileList />
@@ -85,7 +85,7 @@ function AppContent() {
         </div>
 
         {/* Right Column - Output Windows without Tabs */}
-        <div className="w-full lg:w-2/3 p-4">
+        <div className="w-full lg:w-2/3 p-4 pl-2">
           <Output>
             <OutputContent />
           </Output>
