@@ -4,7 +4,6 @@ import type React from 'react'
 import { Upload, FileText, FileType, Trash2, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { useFileUpload } from './file-upload-context'
 import {
   Tooltip,
@@ -151,26 +150,26 @@ export function FileList() {
   return (
     <>
       <h3 className="text-sm font-medium mb-2">Uploaded Files</h3>
-      <ScrollArea className="flex-grow mb-8">
-        {files.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
-            No files uploaded yet
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {files.map((file, index) => (
-              <li
+      <div className="flex-grow mb-8 overflow-y-auto max-h-64">
+        <div className="space-y-2">
+          {files.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No files uploaded yet
+            </p>
+          ) : (
+            files.map((file, index) => (
+              <div
                 key={index}
                 className="flex items-center justify-between text-sm p-3 bg-muted rounded-md group hover:bg-muted/80"
               >
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="flex items-center max-w-[75%]">
+                      <div className="flex items-center min-w-0 flex-1">
                         {file.type === 'application/pdf' ? (
-                          <FileText className="h-4 w-4 min-w-4 mr-2 text-red-500" />
+                          <FileText className="h-4 w-4 flex-shrink-0 mr-2 text-red-500" />
                         ) : (
-                          <FileType className="h-4 w-4 min-w-4 mr-2 text-blue-500" />
+                          <FileType className="h-4 w-4 flex-shrink-0 mr-2 text-blue-500" />
                         )}
                         <span className="truncate">{file.name}</span>
                       </div>
@@ -187,16 +186,16 @@ export function FileList() {
                   variant="destructive"
                   size="sm"
                   onClick={() => removeFile(index)}
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 flex-shrink-0 ml-2"
                 >
                   <Trash2 className="h-4 w-4" />
                   <span>Remove</span>
                 </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </ScrollArea>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </>
   )
 }

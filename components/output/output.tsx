@@ -292,13 +292,13 @@ export function OutputContent() {
         >
           {isDownloading ? (
             <>
-              <Spinner className="h-5 w-5 mr-2" />
-              Downloading...
+              <Spinner className="h-5 w-5 mr-2 flex-shrink-0" />
+              <span className="truncate">Downloading...</span>
             </>
           ) : (
             <>
-              <Download className="h-5 w-5 mr-2" />
-              Download Word (Optional)
+              <Download className="h-5 w-5 mr-2 flex-shrink-0" />
+              <span className="truncate">Download Word</span>
             </>
           )}
         </Button>

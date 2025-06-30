@@ -77,7 +77,7 @@ function AppContent() {
 
       <div className="flex flex-col lg:flex-row flex-1">
         {/* Left Column - File Upload Area */}
-        <div className="w-full lg:w-1/3 p-4 border-r">
+        <div className="w-full lg:w-1/3 p-4">
           <FileUpload>
             <FileUploadArea />
             <FileList />
