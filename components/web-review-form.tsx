@@ -28,8 +28,8 @@ export function WebReviewForm({
   const [secondaryAuthors, setSecondaryAuthors] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const isStep4Current = currentStep === 4
-  const isStep4Complete = isStepComplete(4)
+  const isStep3Current = currentStep === 3
+  const isStep3Complete = isStepComplete(3)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -158,12 +158,12 @@ export function WebReviewForm({
         <CardTitle className="flex items-center gap-2">
           <span
             className={`text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center ${
-              isStep4Current
+              isStep3Current
                 ? 'bg-blue-500 text-white'
                 : 'bg-muted text-muted-foreground'
             }`}
           >
-            4
+            3
           </span>
           Send for Web Review
         </CardTitle>
@@ -198,7 +198,7 @@ export function WebReviewForm({
           <Button
             type="submit"
             className={`w-full ${
-              isStep4Current
+              isStep3Current
                 ? 'bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700'
                 : ''
             }`}
@@ -211,12 +211,12 @@ export function WebReviewForm({
           >
             <span
               className={`mr-2 text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center ${
-                isStep4Current
+                isStep3Current
                   ? 'bg-blue-500 text-white'
                   : 'bg-muted text-muted-foreground'
               }`}
             >
-              4
+              3
             </span>
             <Send className="h-4 w-4 mr-2" />
             {isSubmitting ? 'Sending...' : 'Send for web review'}

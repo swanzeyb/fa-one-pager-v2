@@ -3,7 +3,7 @@
 import { useFileUpload } from '@/components/file-upload/file-upload-context'
 import { useOutput } from '@/components/output/output-context'
 
-export type Step = 1 | 2 | 3 | 4
+export type Step = 1 | 2 | 3
 
 export function useStepTracker(): {
   currentStep: Step
@@ -20,7 +20,7 @@ export function useStepTracker(): {
   const getCurrentStep = (): Step => {
     if (!hasFiles) return 1 // Need to upload files first
     if (!hasGeneratedContent && !isGenerating) return 2 // Ready to generate
-    if (hasGeneratedContent) return 3 // Ready to download or send
+    if (hasGeneratedContent) return 3 // Ready to send (download is optional)
     return 2 // Default to step 2 if generating
   }
 
@@ -32,9 +32,7 @@ export function useStepTracker(): {
       case 2:
         return Boolean(hasGeneratedContent)
       case 3:
-        return Boolean(hasGeneratedContent) // Step 3 (download) is available when content exists
-      case 4:
-        return Boolean(hasGeneratedContent) // Step 4 (send) is available when content exists
+        return Boolean(hasGeneratedContent) // Step 3 (send) is available when content exists
       default:
         return false
     }

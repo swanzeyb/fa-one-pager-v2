@@ -247,8 +247,6 @@ export function OutputContent() {
 
   const isStep2Current = currentStep === 2
   const isStep2Complete = isStepComplete(2)
-  const isStep3Current = currentStep === 3
-  const isStep3Complete = isStepComplete(3)
 
   return (
     <div className="space-y-8">
@@ -290,11 +288,7 @@ export function OutputContent() {
           variant="outline"
           onClick={handleCombinedDownload}
           disabled={isDownloading || !hasContent}
-          className={`w-full sm:w-1/3 py-6 text-lg ${
-            isStep3Current
-              ? 'bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700'
-              : ''
-          }`}
+          className="w-full sm:w-1/3 py-6 text-lg"
         >
           {isDownloading ? (
             <>
@@ -303,17 +297,8 @@ export function OutputContent() {
             </>
           ) : (
             <>
-              <span
-                className={`mr-2 text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center ${
-                  isStep3Current
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-muted text-muted-foreground'
-                }`}
-              >
-                3
-              </span>
               <Download className="h-5 w-5 mr-2" />
-              Download Word
+              Download Word (Optional)
             </>
           )}
         </Button>

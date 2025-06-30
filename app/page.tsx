@@ -61,16 +61,6 @@ function StepBanner() {
             >
               3
             </span>
-            <span>Download Word File</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span
-              className={`text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center ${getStepStyle(
-                4
-              )}`}
-            >
-              4
-            </span>
             <span>Send for Web Review</span>
           </div>
         </div>
