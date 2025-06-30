@@ -183,13 +183,13 @@ export function FileList() {
                   </Tooltip>
                 </TooltipProvider>
                 <Button
-                  variant="destructive"
+                  variant="outline"
                   size="sm"
                   onClick={() => removeFile(index)}
-                  className="flex items-center gap-1 flex-shrink-0 ml-2"
+                  className="flex items-center gap-1 flex-shrink-0 ml-2 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
                 >
                   <Trash2 className="h-4 w-4" />
-                  <span>Remove</span>
+                  {/* <span>Remove</span> */}
                 </Button>
               </div>
             ))
