@@ -243,7 +243,7 @@ export function OutputContent() {
   }
 
   const isGenerating = isProcessing.mediumSummary || isProcessing.howToGuide
-  const hasContent = outputs.mediumSummary || outputs.howToGuide
+  const hasContent = outputs.mediumSummary && outputs.howToGuide
 
   const isStep2Current = currentStep === 2
   const isStep2Complete = isStepComplete(2)

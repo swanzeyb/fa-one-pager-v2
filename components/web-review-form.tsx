@@ -206,7 +206,8 @@ export function WebReviewForm({
               disabled ||
               isSubmitting ||
               !primaryAuthor.trim() ||
-              (!outputs.mediumSummary && !outputs.howToGuide)
+              !outputs.mediumSummary ||
+              !outputs.howToGuide
             }
           >
             <span
