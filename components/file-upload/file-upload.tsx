@@ -101,8 +101,8 @@ export function FileUploadArea() {
         <AlertDescription>
           <div className="space-y-1 text-xs">
             <div className="font-medium">File Limits:</div>
-            <div>• Max 3,000 files</div>
-            <div>• Max 1,000 pages per file</div>
+            <div>• Max 10 files</div>
+            <div>• Max 500 pages per file</div>
             <div>• Max 50 MB per file</div>
             <div className="mt-2">
               <span className="font-medium">Supported formats:</span> PDF, TXT
