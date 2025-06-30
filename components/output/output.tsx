@@ -20,23 +20,35 @@ import { generateDOCX } from '@/app/actions'
 import { useToast } from '@/hooks/use-toast'
 import { analytics } from '@/lib/posthog'
 import { WebReviewForm } from '@/components/web-review-form'
+import { useStepTracker } from '@/hooks/use-step-tracker'
 
 interface OutputProps {
   children: React.ReactNode
 }
 
 export function Output({ children }: OutputProps) {
+  const { currentStep, isStepComplete } = useStepTracker()
+  const isCurrentStep = currentStep === 2
+  const isComplete = isStepComplete(2)
+
   return (
-    <OutputProvider>
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Output</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col space-y-6">
-          {children}
-        </CardContent>
-      </Card>
-    </OutputProvider>
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <span
+            className={`text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center ${
+              isCurrentStep
+                ? 'bg-blue-500 text-white'
+                : 'bg-muted text-muted-foreground'
+            }`}
+          >
+            2
+          </span>
+          Output
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col space-y-6">{children}</CardContent>
+    </Card>
   )
 }
 
@@ -49,6 +61,7 @@ export function OutputContent() {
     processOutputType,
   } = useOutput()
   const { files, fileAttachments, prepareFileAttachments } = useFileUpload()
+  const { currentStep, isStepComplete } = useStepTracker()
   const [editorContent, setEditorContent] = useState('')
   const [isDownloading, setIsDownloading] = useState(false)
   const { toast } = useToast()
@@ -232,6 +245,11 @@ export function OutputContent() {
   const isGenerating = isProcessing.mediumSummary || isProcessing.howToGuide
   const hasContent = outputs.mediumSummary || outputs.howToGuide
 
+  const isStep2Current = currentStep === 2
+  const isStep2Complete = isStepComplete(2)
+  const isStep3Current = currentStep === 3
+  const isStep3Complete = isStepComplete(3)
+
   return (
     <div className="space-y-8">
       {/* Generate and Download Buttons */}
@@ -240,7 +258,11 @@ export function OutputContent() {
           size="lg"
           onClick={handleGenerate}
           disabled={isGenerating || files.length === 0}
-          className="w-full sm:w-2/3 py-6 text-lg"
+          className={`w-full sm:w-2/3 py-6 text-lg ${
+            isStep2Current
+              ? 'bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700'
+              : ''
+          }`}
         >
           {isGenerating ? (
             <>
@@ -248,7 +270,18 @@ export function OutputContent() {
               Generating Content...
             </>
           ) : (
-            <>Generate Content</>
+            <>
+              <span
+                className={`mr-2 text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center ${
+                  isStep2Current
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                2
+              </span>
+              Generate Content
+            </>
           )}
         </Button>
 
@@ -257,7 +290,11 @@ export function OutputContent() {
           variant="outline"
           onClick={handleCombinedDownload}
           disabled={isDownloading || !hasContent}
-          className="w-full sm:w-1/3 py-6 text-lg flex items-center justify-center"
+          className={`w-full sm:w-1/3 py-6 text-lg ${
+            isStep3Current
+              ? 'bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700'
+              : ''
+          }`}
         >
           {isDownloading ? (
             <>
@@ -266,6 +303,15 @@ export function OutputContent() {
             </>
           ) : (
             <>
+              <span
+                className={`mr-2 text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center ${
+                  isStep3Current
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                3
+              </span>
               <Download className="h-5 w-5 mr-2" />
               Download Word
             </>

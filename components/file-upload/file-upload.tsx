@@ -13,16 +13,32 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useStepTracker } from '@/hooks/use-step-tracker'
 
 interface FileUploadProps {
   children: React.ReactNode
 }
 
 export function FileUpload({ children }: FileUploadProps) {
+  const { currentStep, isStepComplete } = useStepTracker()
+  const isCurrentStep = currentStep === 1
+  const isComplete = isStepComplete(1)
+
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>File Upload</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <span
+            className={`text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center ${
+              isCurrentStep
+                ? 'bg-blue-500 text-white'
+                : 'bg-muted text-muted-foreground'
+            }`}
+          >
+            1
+          </span>
+          Upload Files
+        </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col h-[calc(100%-4rem)]">
         {children}
@@ -33,6 +49,9 @@ export function FileUpload({ children }: FileUploadProps) {
 
 export function FileUploadArea() {
   const { isDragging, setIsDragging, addFiles } = useFileUpload()
+  const { currentStep, isStepComplete } = useStepTracker()
+  const isCurrentStep = currentStep === 1
+  const isComplete = isStepComplete(1)
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -90,7 +109,21 @@ export function FileUploadArea() {
         <Button
           variant="outline"
           onClick={() => document.getElementById('file-upload')?.click()}
+          className={
+            isCurrentStep
+              ? 'bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700'
+              : ''
+          }
         >
+          <span
+            className={`mr-2 text-xs font-bold rounded-full w-4 h-4 flex items-center justify-center ${
+              isCurrentStep
+                ? 'bg-blue-500 text-white'
+                : 'bg-muted text-muted-foreground'
+            }`}
+          >
+            1
+          </span>
           Select Files
         </Button>
       </div>

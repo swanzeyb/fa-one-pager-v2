@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast'
 import { analytics } from '@/lib/posthog'
 import { useOutput } from './output/output-context'
 import { generateDOCX } from '@/app/actions'
+import { useStepTracker } from '@/hooks/use-step-tracker'
 
 interface WebReviewFormProps {
   className?: string
@@ -22,9 +23,13 @@ export function WebReviewForm({
 }: WebReviewFormProps) {
   const { toast } = useToast()
   const { outputs } = useOutput()
+  const { currentStep, isStepComplete } = useStepTracker()
   const [primaryAuthor, setPrimaryAuthor] = useState('')
   const [secondaryAuthors, setSecondaryAuthors] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const isStep4Current = currentStep === 4
+  const isStep4Complete = isStepComplete(4)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -150,7 +155,18 @@ export function WebReviewForm({
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle>Send for Web Review</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <span
+            className={`text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center ${
+              isStep4Current
+                ? 'bg-blue-500 text-white'
+                : 'bg-muted text-muted-foreground'
+            }`}
+          >
+            4
+          </span>
+          Send for Web Review
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -181,7 +197,11 @@ export function WebReviewForm({
 
           <Button
             type="submit"
-            className="w-full"
+            className={`w-full ${
+              isStep4Current
+                ? 'bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700'
+                : ''
+            }`}
             disabled={
               disabled ||
               isSubmitting ||
@@ -189,6 +209,15 @@ export function WebReviewForm({
               (!outputs.mediumSummary && !outputs.howToGuide)
             }
           >
+            <span
+              className={`mr-2 text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center ${
+                isStep4Current
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-muted text-muted-foreground'
+              }`}
+            >
+              4
+            </span>
             <Send className="h-4 w-4 mr-2" />
             {isSubmitting ? 'Sending...' : 'Send for web review'}
           </Button>
