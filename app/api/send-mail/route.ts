@@ -6,6 +6,8 @@ export async function POST(req: NextRequest) {
     // Get the form data from the request in Next.js App Router
     const formData = await req.formData()
     const file = formData.get('file') as File
+    const primaryAuthor = formData.get('primaryAuthor') as string
+    const secondaryAuthors = formData.get('secondaryAuthors') as string
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
@@ -42,11 +44,24 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // Create email body with author information
+    let emailBody = `A new research document has been submitted for web review.\n\nFile: ${file.name}\n\nAuthors:\n`
+
+    if (primaryAuthor) {
+      emailBody += `Primary Author: ${primaryAuthor}\n`
+    }
+
+    if (secondaryAuthors && secondaryAuthors.trim()) {
+      emailBody += `Secondary Authors: ${secondaryAuthors}\n`
+    }
+
+    emailBody += `\nPlease review the attached document.`
+
     await transporter.sendMail({
       from: process.env.GMAIL_USERNAME,
       to: process.env.EMAIL_TO, // configure recipient in .env
-      subject: `Received file: ${file.name}`,
-      text: `Sent a file: ${file.name}`,
+      subject: `Web Review Request: ${file.name}`,
+      text: emailBody,
       attachments: [
         {
           filename: file.name || 'attachment',

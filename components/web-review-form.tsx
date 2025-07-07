@@ -108,6 +108,8 @@ export function WebReviewForm({
       // Send to API
       const form = new FormData()
       form.append('file', file)
+      form.append('primaryAuthor', primaryAuthor)
+      form.append('secondaryAuthors', secondaryAuthors)
 
       const apiResponse = await fetch('/api/send-mail', {
         method: 'POST',
