@@ -7,15 +7,10 @@ import { Spinner } from '@/components/spinner'
 
 import { OutputProvider, useOutput } from './output-context'
 import { useFileUpload } from '../file-upload/file-upload-context'
-import {
-  SimpleEditor,
-  Toolbar,
-  EditorContent,
-  useSimpleEditor,
-} from '../simple-editor'
+import { WysiwygEditor } from '../wysiwyg-editor'
 import type { OutputType } from '@/app/actions'
 import type React from 'react'
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { generateDOCX } from '@/app/actions'
 import { useToast } from '@/hooks/use-toast'
 import { analytics } from '@/lib/posthog'
@@ -65,7 +60,6 @@ export function OutputContent() {
   const [editorContent, setEditorContent] = useState('')
   const [isDownloading, setIsDownloading] = useState(false)
   const { toast } = useToast()
-  const editorRef = useRef(null)
 
   const handleGenerate = async () => {
     const attachments = await prepareFileAttachments()
@@ -196,14 +190,14 @@ export function OutputContent() {
     if (outputs[outputType]) {
       return (
         <div className="flex flex-col h-full">
-          <SimpleEditor
+          <WysiwygEditor
             content={outputs[outputType]}
-            onChange={(content) => handleEditorChange(content, outputType)}
-            ref={editorRef}
-          >
-            <Toolbar />
-            <EditorContent />
-          </SimpleEditor>
+            onChange={(content: string) =>
+              handleEditorChange(content, outputType)
+            }
+            className="flex-1"
+            placeholder="Your content will appear here..."
+          />
 
           {/* Remove the footer with send button from individual panels */}
           <div className="border-t bg-gray-50 p-3 flex justify-end">
