@@ -8,6 +8,7 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File
     const primaryAuthor = formData.get('primaryAuthor') as string
     const secondaryAuthors = formData.get('secondaryAuthors') as string
+    const urlSources = formData.get('urlSources') as string
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
@@ -53,6 +54,10 @@ export async function POST(req: NextRequest) {
 
     if (secondaryAuthors && secondaryAuthors.trim()) {
       emailBody += `Secondary Authors: ${secondaryAuthors}\n`
+    }
+
+    if (urlSources && urlSources.trim()) {
+      emailBody += `\nSource URLs:\n${urlSources}\n`
     }
 
     emailBody += `\nPlease review the attached document.`

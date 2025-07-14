@@ -26,6 +26,7 @@ export function WebReviewForm({
   const { currentStep, isStepComplete } = useStepTracker()
   const [primaryAuthor, setPrimaryAuthor] = useState('')
   const [secondaryAuthors, setSecondaryAuthors] = useState('')
+  const [urlSources, setUrlSources] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const isStep3Current = currentStep === 3
@@ -110,6 +111,7 @@ export function WebReviewForm({
       form.append('file', file)
       form.append('primaryAuthor', primaryAuthor)
       form.append('secondaryAuthors', secondaryAuthors)
+      form.append('urlSources', urlSources)
 
       const apiResponse = await fetch('/api/send-mail', {
         method: 'POST',
@@ -130,6 +132,7 @@ export function WebReviewForm({
         // Reset form
         setPrimaryAuthor('')
         setSecondaryAuthors('')
+        setUrlSources('')
       } else {
         throw new Error(result.error || 'Unknown error occurred')
       }
@@ -193,6 +196,18 @@ export function WebReviewForm({
               value={secondaryAuthors}
               onChange={(e) => setSecondaryAuthors(e.target.value)}
               placeholder="Enter secondary authors (comma-separated)"
+              disabled={disabled || isSubmitting}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="url-sources">URL Sources</Label>
+            <Input
+              id="url-sources"
+              type="text"
+              value={urlSources}
+              onChange={(e) => setUrlSources(e.target.value)}
+              placeholder="Enter source URLs (comma-separated)"
               disabled={disabled || isSubmitting}
             />
           </div>
