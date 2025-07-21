@@ -5,6 +5,8 @@ export {
   useFeatureFlagOverride,
 } from './feature-store'
 
-// Future stores will be exported here:
-// export { useCoreStore } from './core-store'
-// export { useUIStore } from './ui-store'
+export { useImageStore } from './image-store'
+
+// Other stores
+export { useCoreStore } from './core-store'
+export { useUIStore } from './ui-store'

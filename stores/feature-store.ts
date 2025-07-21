@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { FEATURE_FLAGS } from '@/lib/posthog'
+import { FEATURE_FLAGS } from '@/lib/constants'
 
 interface FeatureState {
   // State

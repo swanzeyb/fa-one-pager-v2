@@ -1,6 +1,5 @@
 'use client'
 
-import { ImageUploadProvider } from '@/components/image-upload-context'
 import { Toaster } from '@/components/ui/toaster'
 import {
   FileUpload,
@@ -8,7 +7,6 @@ import {
   FileList,
 } from '@/components/file-upload/file-upload'
 import { Output, OutputContent } from '@/components/output/output'
-import { FeatureFlagProvider } from '@/components/feature-flag-provider-bridge'
 import { useStepTracker } from '@/hooks/use-step-tracker'
 
 function StepBanner() {
@@ -95,11 +93,9 @@ function AppContent() {
 
 export default function FileUploadInterface() {
   return (
-    <FeatureFlagProvider>
-      <ImageUploadProvider>
-        <AppContent />
-        <Toaster />
-      </ImageUploadProvider>
-    </FeatureFlagProvider>
+    <>
+      <AppContent />
+      <Toaster />
+    </>
   )
 }

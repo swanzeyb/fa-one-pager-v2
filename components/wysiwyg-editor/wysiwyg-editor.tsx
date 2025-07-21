@@ -6,7 +6,7 @@ import {
   parseHtmlToStructure,
   type StructuredElement,
 } from '@/utils/html-parser'
-import { useImageUpload } from '../image-upload-context'
+import { useImageStore } from '@/stores'
 
 interface WysiwygEditorProps {
   content: string
@@ -31,7 +31,7 @@ export const WysiwygEditor = forwardRef<HTMLDivElement, WysiwygEditorProps>(
     const [structuredContent, setStructuredContent] = useState<
       StructuredElement[]
     >([])
-    const { getAllImages } = useImageUpload()
+    const getAllImages = useImageStore((state) => state.getAllImages)
 
     // Process content with image replacements
     useEffect(() => {

@@ -1,12 +1,12 @@
-"use client"
+'use client'
 
-import type React from "react"
+import type React from 'react'
 
-import { useState, useRef, useEffect } from "react"
-import { Upload, RefreshCw, Lock } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useImageUpload } from "./image-upload-context"
-import { useFeatureFlag, FEATURE_FLAGS } from "@/lib/posthog"
+import { useState, useRef, useEffect } from 'react'
+import { Upload, RefreshCw, Lock } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useFeatureFlag, useImageStore } from '@/stores'
+import { FEATURE_FLAGS } from '@/lib/constants'
 
 interface ImageUploadProps {
   alt: string
@@ -14,8 +14,11 @@ interface ImageUploadProps {
   className?: string
 }
 
-export function ImageUpload({ alt, src, className = "" }: ImageUploadProps) {
-  const { addImage, getImage } = useImageUpload()
+export function ImageUpload({ alt, src, className = '' }: ImageUploadProps) {
+  // Use Zustand store directly
+  const addImage = useImageStore((state) => state.addImage)
+  const getImage = useImageStore((state) => state.getImage)
+
   const [image, setImage] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -24,14 +27,14 @@ export function ImageUpload({ alt, src, className = "" }: ImageUploadProps) {
   const isImageUploadEnabled = useFeatureFlag(FEATURE_FLAGS.IMAGE_UPLOAD)
 
   // Create a safe key from the alt text
-  const imageKey = `img-${alt.replace(/\s+/g, "-").toLowerCase()}`
+  const imageKey = `img-${alt.replace(/\s+/g, '-').toLowerCase()}`
 
   useEffect(() => {
     // Check if we already have this image in our context
     const existingImage = getImage(imageKey)
     if (existingImage) {
       setImage(existingImage)
-    } else if (src && !src.includes("placeholder")) {
+    } else if (src && !src.includes('placeholder')) {
       setImage(src)
       addImage(imageKey, src)
     }
@@ -69,7 +72,11 @@ export function ImageUpload({ alt, src, className = "" }: ImageUploadProps) {
   if (!isImageUploadEnabled && image) {
     return (
       <div className="my-4">
-        <img src={image || "/placeholder.svg"} alt={alt} className={`max-w-full h-auto rounded-md ${className}`} />
+        <img
+          src={image || '/placeholder.svg'}
+          alt={alt}
+          className={`max-w-full h-auto rounded-md ${className}`}
+        />
       </div>
     )
   }
@@ -80,7 +87,9 @@ export function ImageUpload({ alt, src, className = "" }: ImageUploadProps) {
       <div className="my-4">
         <div className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center bg-gray-50">
           <Lock className="h-8 w-8 text-gray-400 mb-2" />
-          <p className="text-sm text-gray-500 text-center mb-1">Image uploads coming soon</p>
+          <p className="text-sm text-gray-500 text-center mb-1">
+            Image uploads coming soon
+          </p>
           <p className="text-xs text-gray-400 text-center">{alt}</p>
         </div>
       </div>
@@ -89,13 +98,28 @@ export function ImageUpload({ alt, src, className = "" }: ImageUploadProps) {
 
   return (
     <div className="my-4">
-      <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="image/*"
+        className="hidden"
+      />
 
       {image ? (
         <div className="relative group">
-          <img src={image || "/placeholder.svg"} alt={alt} className={`max-w-full h-auto rounded-md ${className}`} />
+          <img
+            src={image || '/placeholder.svg'}
+            alt={alt}
+            className={`max-w-full h-auto rounded-md ${className}`}
+          />
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-            <Button variant="secondary" size="sm" onClick={triggerFileInput} className="flex items-center gap-1">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={triggerFileInput}
+              className="flex items-center gap-1"
+            >
               <RefreshCw className="h-4 w-4" />
               Replace Image
             </Button>
@@ -107,7 +131,9 @@ export function ImageUpload({ alt, src, className = "" }: ImageUploadProps) {
           className="border-2 border-dashed border-gray-300 rounded-md p-6 flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 transition-colors"
         >
           <Upload className="h-8 w-8 text-gray-400 mb-2" />
-          <p className="text-sm text-gray-500 text-center mb-1">{isUploading ? "Uploading..." : "Upload an image"}</p>
+          <p className="text-sm text-gray-500 text-center mb-1">
+            {isUploading ? 'Uploading...' : 'Upload an image'}
+          </p>
           <p className="text-xs text-gray-400 text-center">{alt}</p>
         </div>
       )}
