@@ -1,11 +1,12 @@
 'use client'
 
-import type React from 'react'
+import React from 'react'
 import { Upload, FileText, FileType, Trash2, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useFileUpload } from './file-upload-context'
+import { useCoreStore } from '@/stores/core-store'
 import { useUIStore } from '@/stores/ui-store'
+import { useToast } from '@/hooks/use-toast'
 import {
   Tooltip,
   TooltipContent,
@@ -46,11 +47,19 @@ export function FileUpload({ children }: FileUploadProps) {
   )
 }
 
-  const { addFiles } = useFileUpload()
+  export function FileDropzone() {
+  const addFiles = useCoreStore(state => state.addFiles)
+  const setToast = useCoreStore(state => state.setToast)
   const isDragOverActive = useUIStore((s) => s.isDragOverActive)
   const setDragOverActive = useUIStore((s) => s.setDragOverActive)
   const { currentStep } = useStepTracker()
   const isCurrentStep = currentStep === 1
+
+  // Set up toast function for the store
+  React.useEffect(() => {
+    const { toast } = useToast()
+    setToast(toast)
+  }, [setToast])
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -147,7 +156,8 @@ export function FileUpload({ children }: FileUploadProps) {
 }
 
 export function FileList() {
-  const { files, removeFile } = useFileUpload()
+  const files = useCoreStore(state => state.files)
+  const removeFile = useCoreStore(state => state.removeFile)
 
   return (
     <>
@@ -159,7 +169,7 @@ export function FileList() {
               No files uploaded yet
             </p>
           ) : (
-            files.map((file, index) => (
+            files.map((file: File, index: number) => (
               <div
                 key={index}
                 className="flex items-center justify-between text-sm p-3 bg-muted rounded-md group hover:bg-muted/80"

@@ -5,12 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/spinner'
 
-import { OutputProvider, useOutput } from './output-context'
-import { useFileUpload } from '../file-upload/file-upload-context'
+import { useCoreStore } from '@/stores/core-store'
 import { WysiwygEditor } from '../wysiwyg-editor'
 import type { OutputType } from '@/app/actions'
-import type React from 'react'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { generateDOCX } from '@/app/actions'
 import { useToast } from '@/hooks/use-toast'
 import { analytics } from '@/lib/posthog'
@@ -48,27 +46,30 @@ export function Output({ children }: OutputProps) {
 }
 
 export function OutputContent() {
-  const {
-    outputs,
-    errors,
-    isProcessing,
-    processMultipleOutputs,
-    processOutputType,
-  } = useOutput()
-  const { files, fileAttachments, prepareFileAttachments } = useFileUpload()
+  const outputs = useCoreStore(state => state.outputs)
+  const errors = useCoreStore(state => state.errors)
+  const isProcessing = useCoreStore(state => state.isProcessing)
+  const processMultipleOutputs = useCoreStore(state => state.processMultipleOutputs)
+  const processOutputType = useCoreStore(state => state.processOutputType)
+  const files = useCoreStore(state => state.files)
+  const fileAttachments = useCoreStore(state => state.fileAttachments)
+  const setToast = useCoreStore(state => state.setToast)
   const { currentStep, isStepComplete } = useStepTracker()
   const [editorContent, setEditorContent] = useState('')
   const [isDownloading, setIsDownloading] = useState(false)
   const { toast } = useToast()
 
+  // Set up toast function for the store
+  React.useEffect(() => {
+    setToast(toast)
+  }, [setToast, toast])
+
   const handleGenerate = async () => {
-    const attachments = await prepareFileAttachments()
-    processMultipleOutputs(attachments)
+    processMultipleOutputs()
   }
 
   const handleRegenerate = async (outputType: OutputType) => {
-    const attachments = await prepareFileAttachments()
-    processOutputType(outputType, attachments, true)
+    processOutputType(outputType, true)
   }
 
   const handleEditorChange = (content: string, outputType: OutputType) => {
@@ -177,8 +178,7 @@ export function OutputContent() {
             size="sm"
             className="mt-4"
             onClick={async () => {
-              const attachments = await prepareFileAttachments()
-              processMultipleOutputs(attachments)
+              processMultipleOutputs()
             }}
           >
             Try Again

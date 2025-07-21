@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { analytics } from '@/lib/posthog'
-import { useOutput } from './output/output-context'
+import { useCoreStore } from '@/stores/core-store'
 import { generateDOCX } from '@/app/actions'
 import { useStepTracker } from '@/hooks/use-step-tracker'
 
@@ -22,7 +22,7 @@ export function WebReviewForm({
   disabled = false,
 }: WebReviewFormProps) {
   const { toast } = useToast()
-  const { outputs } = useOutput()
+  const outputs = useCoreStore(state => state.outputs)
   const { currentStep, isStepComplete } = useStepTracker()
   const [primaryAuthor, setPrimaryAuthor] = useState('')
   const [secondaryAuthors, setSecondaryAuthors] = useState('')
