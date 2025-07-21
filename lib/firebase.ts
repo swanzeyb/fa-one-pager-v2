@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getAI } from 'firebase/ai'
+import { getAI, getGenerativeModel, GoogleAIBackend } from 'firebase/ai'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,8 +13,8 @@ const firebaseConfig = {
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig)
 
-// Initialize Vertex AI
-export const vertexAI = getAI(app)
+// Initialize the Gemini Developer API backend service
+export const ai = getAI(app, { backend: new GoogleAIBackend() })
 
 // Log configuration status (development only)
 if (process.env.NODE_ENV === 'development') {
