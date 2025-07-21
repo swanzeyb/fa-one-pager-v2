@@ -10,3 +10,6 @@ export { useImageStore } from './image-store'
 // Other stores
 export { useCoreStore } from './core-store'
 export { useUIStore } from './ui-store'
+
+// Export types
+export * from './types'
