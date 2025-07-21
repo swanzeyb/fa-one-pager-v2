@@ -15,3 +15,16 @@ export const app = initializeApp(firebaseConfig)
 
 // Initialize Vertex AI
 export const vertexAI = getVertexAI(app)
+
+// Initialize App Check (only in browser)
+if (typeof window !== 'undefined') {
+  import('./app-check').then(
+    ({ initializeFirebaseAppCheck, initializeAppCheckDebug }) => {
+      // Use debug mode in development
+      if (process.env.NODE_ENV === 'development') {
+        initializeAppCheckDebug()
+      }
+      initializeFirebaseAppCheck()
+    }
+  )
+}
