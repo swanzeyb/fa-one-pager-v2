@@ -9,7 +9,7 @@ import {
 } from '@/components/file-upload/file-upload'
 import { Output, OutputContent } from '@/components/output/output'
 import { FileUploadProvider } from '@/components/file-upload/file-upload-context'
-import { FeatureFlagProvider } from '@/components/feature-flag-provider'
+import { FeatureFlagProvider } from '@/components/feature-flag-provider-bridge'
 import { OutputProvider } from '@/components/output/output-context'
 import { useStepTracker } from '@/hooks/use-step-tracker'
 
