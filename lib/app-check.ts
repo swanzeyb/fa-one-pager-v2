@@ -5,21 +5,32 @@ import { app } from './firebase'
 export function initializeFirebaseAppCheck() {
   // Only initialize App Check in the browser
   if (typeof window !== 'undefined') {
+    const appCheckKey = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_KEY
+
+    if (!appCheckKey) {
+      console.error('Firebase App Check key is missing')
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('App Check is required in production')
+      }
+      return
+    }
+
     try {
       const appCheck = initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider(
-          process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_KEY!
-        ),
-        isTokenAutoRefreshEnabled: true, // Auto-refresh tokens
+        provider: new ReCaptchaV3Provider(appCheckKey),
+        isTokenAutoRefreshEnabled: true,
       })
 
-      console.log('App Check initialized successfully')
+      if (process.env.NODE_ENV === 'development') {
+        console.log('App Check initialized successfully')
+      }
       return appCheck
     } catch (error) {
       console.error('App Check initialization failed:', error)
-      // In development, you might want to continue without App Check
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Continuing without App Check in development mode')
+
+      // In production, App Check failure should be treated as critical
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('App Check initialization failed in production')
       }
     }
   }

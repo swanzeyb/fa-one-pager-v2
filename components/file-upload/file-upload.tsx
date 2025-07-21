@@ -47,19 +47,21 @@ export function FileUpload({ children }: FileUploadProps) {
   )
 }
 
-  export function FileDropzone() {
-  const addFiles = useCoreStore(state => state.addFiles)
-  const setToast = useCoreStore(state => state.setToast)
+export function FileDropzone() {
+  const addFiles = useCoreStore((state) => state.addFiles)
+  const setToast = useCoreStore((state) => state.setToast)
   const isDragOverActive = useUIStore((s) => s.isDragOverActive)
   const setDragOverActive = useUIStore((s) => s.setDragOverActive)
   const { currentStep } = useStepTracker()
   const isCurrentStep = currentStep === 1
 
+  // Call useToast at the top level of the component
+  const { toast } = useToast()
+
   // Set up toast function for the store
   React.useEffect(() => {
-    const { toast } = useToast()
     setToast(toast)
-  }, [setToast])
+  }, [setToast, toast])
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -156,8 +158,8 @@ export function FileUpload({ children }: FileUploadProps) {
 }
 
 export function FileList() {
-  const files = useCoreStore(state => state.files)
-  const removeFile = useCoreStore(state => state.removeFile)
+  const files = useCoreStore((state) => state.files)
+  const removeFile = useCoreStore((state) => state.removeFile)
 
   return (
     <>

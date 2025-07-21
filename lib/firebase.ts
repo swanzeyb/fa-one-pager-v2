@@ -16,6 +16,11 @@ export const app = initializeApp(firebaseConfig)
 // Initialize Vertex AI
 export const vertexAI = getAI(app)
 
+// Log configuration status (development only)
+if (process.env.NODE_ENV === 'development') {
+  console.log('Firebase initialized for project:', firebaseConfig.projectId)
+}
+
 // Initialize App Check (only in browser)
 if (typeof window !== 'undefined') {
   import('./app-check').then(
