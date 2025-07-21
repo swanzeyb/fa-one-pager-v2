@@ -1,6 +1,7 @@
 // Firebase AI Service: Client-side AI processing using Firebase AI Logic
-import { getGenerativeModel } from 'firebase/vertexai-preview'
+import { getGenerativeModel } from 'firebase/ai'
 import { vertexAI } from '@/lib/firebase'
+import { getPromptForType } from '@/lib/prompts'
 import type { FileAttachment, OutputType } from '@/app/actions'
 
 // Firebase AI model configuration
@@ -63,14 +64,15 @@ export async function processOutputWithFirebase(
     throw new Error('No valid files could be processed')
   }
 
-  // TODO: Load prompts (we'll get these from your prompts.json in next stage)
-  const systemPrompt = `You are an AI assistant that processes documents and creates summaries. 
-    Output type requested: ${outputType}
-    ${
-      isRegeneration
-        ? 'Please make this version different from previous versions.'
-        : ''
-    }`
+  // Load the correct prompt for this output type
+  const promptConfig = getPromptForType(outputType)
+
+  // Create system prompt with regeneration instructions
+  const systemPrompt =
+    promptConfig.system +
+    (isRegeneration
+      ? ' Please make this regeneration noticeably different from previous versions.'
+      : '')
 
   try {
     // Adjust temperature for regeneration
@@ -81,7 +83,7 @@ export async function processOutputWithFirebase(
     const promptParts = [
       { text: systemPrompt },
       ...fileParts,
-      { text: `Please process these files and create a ${outputType}.` },
+      { text: promptConfig.prompt },
     ]
 
     // Generate content using Firebase AI Logic
@@ -96,7 +98,11 @@ export async function processOutputWithFirebase(
     return text
   } catch (error) {
     console.error('Firebase AI processing error:', error)
-    throw new Error(`AI processing failed: ${error.message}`)
+    throw new Error(
+      `AI processing failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
   }
 }
 

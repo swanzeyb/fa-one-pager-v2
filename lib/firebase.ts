@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app'
-import { getVertexAI } from 'firebase/vertexai-preview'
+import { getAI } from 'firebase/ai'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -14,7 +14,7 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig)
 
 // Initialize Vertex AI
-export const vertexAI = getVertexAI(app)
+export const vertexAI = getAI(app)
 
 // Initialize App Check (only in browser)
 if (typeof window !== 'undefined') {
