@@ -1,7 +1,5 @@
 'use server'
 
-import { generateText } from 'ai'
-import { google } from '@ai-sdk/google'
 import { jsPDF } from 'jspdf'
 import {
   Document,
@@ -83,11 +81,6 @@ export async function processOutput(
         0.9
       )
 
-      // Create model with adjusted temperature
-      const model = google('gemini-2.0-flash', {
-        temperature: adjustedTemperature,
-      })
-
       // Create messages array for the specified output type
       const messages = [
         {
@@ -128,31 +121,7 @@ export async function processOutput(
         },
       ]
 
-      // Use generateText instead of generateObject for more reliable results
-      const result = await generateText({
-        model: model,
-        messages,
-      })
-
       // Validate that we got some content
-      if (!result.text || result.text.trim().length < 50) {
-        throw new Error('Generated content is too short or empty')
-      }
-
-      // Strip markdown code blocks and clean up the content
-      let cleanedContent = result.text
-
-      // Remove ```html from the beginning
-      cleanedContent = cleanedContent.replace(/^```html\s*/i, '')
-
-      // Remove ``` from the end
-      cleanedContent = cleanedContent.replace(/\s*```\s*$/, '')
-
-      // Remove newlines
-      cleanedContent = cleanedContent.replace(/\n/g, '')
-
-      // Return the cleaned HTML content
-      return cleanedContent
     } catch (error) {
       console.error(
         `Error generating content (attempt ${retryCount + 1}/${MAX_RETRIES}):`,
