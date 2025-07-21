@@ -7,7 +7,7 @@ import type { FileAttachment, OutputType } from '@/app/actions'
 // Firebase AI model configuration
 const getModel = (temperature: number = 0.3) => {
   return getGenerativeModel(vertexAI, {
-    model: 'gemini-pro',
+    model: 'gemini-2.0-flash',
     generationConfig: {
       temperature,
       topK: 40,
