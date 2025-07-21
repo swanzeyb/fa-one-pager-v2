@@ -9,7 +9,7 @@ import { useCoreStore } from '@/stores/core-store'
 import { WysiwygEditor } from '../wysiwyg-editor'
 import type { OutputType } from '@/app/actions'
 import React, { useState } from 'react'
-import { generateDOCX } from '@/app/actions'
+import { useClientAI } from '@/hooks/use-client-ai'
 import { useToast } from '@/hooks/use-toast'
 import { analytics } from '@/lib/posthog'
 import { WebReviewForm } from '@/components/web-review-form'
@@ -46,18 +46,20 @@ export function Output({ children }: OutputProps) {
 }
 
 export function OutputContent() {
-  const outputs = useCoreStore(state => state.outputs)
-  const errors = useCoreStore(state => state.errors)
-  const isProcessing = useCoreStore(state => state.isProcessing)
-  const processMultipleOutputs = useCoreStore(state => state.processMultipleOutputs)
-  const processOutputType = useCoreStore(state => state.processOutputType)
-  const files = useCoreStore(state => state.files)
-  const fileAttachments = useCoreStore(state => state.fileAttachments)
-  const setToast = useCoreStore(state => state.setToast)
+  const outputs = useCoreStore((state) => state.outputs)
+  const errors = useCoreStore((state) => state.errors)
+  const isProcessing = useCoreStore((state) => state.isProcessing)
+  const processMultipleOutputs = useCoreStore(
+    (state) => state.processMultipleOutputs
+  )
+  const processOutputType = useCoreStore((state) => state.processOutputType)
+  const files = useCoreStore((state) => state.files)
+  const fileAttachments = useCoreStore((state) => state.fileAttachments)
+  const setToast = useCoreStore((state) => state.setToast)
   const { currentStep, isStepComplete } = useStepTracker()
   const [editorContent, setEditorContent] = useState('')
-  const [isDownloading, setIsDownloading] = useState(false)
   const { toast } = useToast()
+  const { downloadDOCX, isGeneratingDoc, error } = useClientAI()
 
   // Set up toast function for the store
   React.useEffect(() => {
@@ -90,7 +92,6 @@ export function OutputContent() {
       return
     }
 
-    setIsDownloading(true)
     try {
       // Track download in PostHog
       analytics.trackDownload('combined', 'docx')
@@ -125,18 +126,9 @@ export function OutputContent() {
 
       // Generate the DOCX with a proper title
       const documentTitle = `Research Summary - ${currentDate}`
-      const dataUri = await generateDOCX(combinedContent, documentTitle)
-      const filename = `research-summary-${currentDate
-        .toLowerCase()
-        .replace(/\s+/g, '-')}.docx`
 
-      // Create a link element and trigger download
-      const link = document.createElement('a')
-      link.href = dataUri
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      // Use the client-side DOCX generation and download
+      await downloadDOCX(combinedContent, documentTitle)
 
       toast({
         title: 'Download started',
@@ -161,8 +153,6 @@ export function OutputContent() {
         type: 'error',
         duration: 7000,
       })
-    } finally {
-      setIsDownloading(false)
     }
   }
 
@@ -281,13 +271,13 @@ export function OutputContent() {
           size="lg"
           variant="outline"
           onClick={handleCombinedDownload}
-          disabled={isDownloading || !hasContent}
+          disabled={isGeneratingDoc || !hasContent}
           className="w-full sm:w-1/3 py-6 text-lg"
         >
-          {isDownloading ? (
+          {isGeneratingDoc ? (
             <>
               <Spinner className="h-5 w-5 mr-2 flex-shrink-0" />
-              <span className="truncate">Downloading...</span>
+              <span className="truncate">Generating...</span>
             </>
           ) : (
             <>
