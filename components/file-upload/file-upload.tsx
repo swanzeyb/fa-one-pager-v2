@@ -5,6 +5,7 @@ import { Upload, FileText, FileType, Trash2, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useFileUpload } from './file-upload-context'
+import { useUIStore } from '@/stores/ui-store'
 import {
   Tooltip,
   TooltipContent,
@@ -45,23 +46,24 @@ export function FileUpload({ children }: FileUploadProps) {
   )
 }
 
-export function FileUploadArea() {
-  const { isDragging, setIsDragging, addFiles } = useFileUpload()
+  const { addFiles } = useFileUpload()
+  const isDragOverActive = useUIStore((s) => s.isDragOverActive)
+  const setDragOverActive = useUIStore((s) => s.setDragOverActive)
   const { currentStep } = useStepTracker()
   const isCurrentStep = currentStep === 1
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
-    setIsDragging(true)
+    setDragOverActive(true)
   }
 
   const handleDragLeave = () => {
-    setIsDragging(false)
+    setDragOverActive(false)
   }
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
-    setIsDragging(false)
+    setDragOverActive(false)
 
     if (e.dataTransfer.files) {
       const newFiles = Array.from(e.dataTransfer.files)
@@ -80,7 +82,7 @@ export function FileUploadArea() {
     <>
       <div
         className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center h-64 mb-4 transition-colors ${
-          isDragging
+          isDragOverActive
             ? 'border-primary bg-primary/10'
             : 'border-muted-foreground/25'
         }`}
