@@ -13,23 +13,8 @@ export async function processOutput(
   return firebaseProcessOutput(attachments, type, isRegeneration)
 }
 
-// These document generation functions will be updated in Stage 6
-// For now, keep them as stubs
-export async function generateDOCX(
-  content: string,
-  title: string
-): Promise<string> {
-  // TODO: Move to client-side implementation in Stage 6
-  throw new Error('DOCX generation not yet migrated to client-side')
-}
-
-export async function generatePDF(
-  content: string,
-  title: string
-): Promise<string> {
-  // TODO: Move to client-side implementation in Stage 6
-  throw new Error('PDF generation not yet migrated to client-side')
-}
+// Document generation functions are available in @/app/actions
+// Import them from there if needed
 
 // Retry function - now uses Firebase AI retry logic
 export async function retryAI<T>(

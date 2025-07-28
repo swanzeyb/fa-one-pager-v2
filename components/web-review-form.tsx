@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { analytics } from '@/lib/posthog'
 import { useCoreStore } from '@/stores/core-store'
-import { useClientAI } from '@/hooks/use-client-ai'
 import { useStepTracker } from '@/hooks/use-step-tracker'
 
 interface WebReviewFormProps {
@@ -24,7 +23,6 @@ export function WebReviewForm({
   const { toast } = useToast()
   const outputs = useCoreStore((state) => state.outputs)
   const { currentStep, isStepComplete } = useStepTracker()
-  const { downloadDOCX, isGeneratingDoc, error } = useClientAI()
   const [primaryAuthor, setPrimaryAuthor] = useState('')
   const [secondaryAuthors, setSecondaryAuthors] = useState('')
   const [urlSources, setUrlSources] = useState('')
@@ -94,8 +92,8 @@ export function WebReviewForm({
       // Generate the DOCX with a proper title including author info
       const documentTitle = `Research Summary - ${currentDate} - ${primaryAuthor}`
 
-      // Use the client-side DOCX generation
-      const { generateDOCX } = await import('@/app/client-actions')
+      // Use the server-side DOCX generation
+      const { generateDOCX } = await import('@/app/actions')
       const dataUri = await generateDOCX(combinedContent, documentTitle)
 
       // Convert data URI to Blob

@@ -4,10 +4,10 @@
 import { useState, useCallback } from 'react'
 import {
   processOutput,
-  generateDOCX,
   generatePDF,
   downloadFile,
 } from '@/app/client-actions'
+import { generateDOCX } from '@/app/actions'
 import type { FileAttachment, OutputType } from '@/app/actions'
 
 export interface UseClientAIReturn {
