@@ -47,6 +47,8 @@ export function Output({ children }: OutputProps) {
 
 export function OutputContent() {
   const outputs = useCoreStore((state) => state.outputs)
+  const editedOutputs = useCoreStore((state) => state.editedOutputs)
+  const updateEditedOutput = useCoreStore((state) => state.updateEditedOutput)
   const errors = useCoreStore((state) => state.errors)
   const isProcessing = useCoreStore((state) => state.isProcessing)
   const processMultipleOutputs = useCoreStore(
@@ -57,7 +59,10 @@ export function OutputContent() {
   const fileAttachments = useCoreStore((state) => state.fileAttachments)
   const setToast = useCoreStore((state) => state.setToast)
   const { currentStep, isStepComplete } = useStepTracker()
-  const [editorContent, setEditorContent] = useState('')
+  const [editedContent, setEditedContent] = useState<{
+    mediumSummary?: string
+    howToGuide?: string
+  }>({})
   const { toast } = useToast()
   const { downloadDOCX, isGeneratingDoc, error } = useClientAI()
 
@@ -75,14 +80,27 @@ export function OutputContent() {
   }
 
   const handleEditorChange = (content: string, outputType: OutputType) => {
-    if (outputType === 'mediumSummary') {
-      setEditorContent(content)
-    }
+    // Update local state for immediate UI feedback
+    setEditedContent(prev => ({
+      ...prev,
+      [outputType]: content
+    }))
+    
+    // Update the store so the edited content persists and is available for download
+    updateEditedOutput(outputType, content)
   }
 
   const handleCombinedDownload = async () => {
+    // Get the current content (edited or original)
+    const getCurrentContent = (outputType: OutputType) => {
+      return editedOutputs[outputType] || outputs[outputType]
+    }
+
+    const mediumSummaryContent = getCurrentContent('mediumSummary')
+    const howToGuideContent = getCurrentContent('howToGuide')
+
     // Check if we have content to download
-    if (!outputs.mediumSummary && !outputs.howToGuide) {
+    if (!mediumSummaryContent && !howToGuideContent) {
       toast({
         title: 'No content to download',
         description: 'Please generate content first before downloading',
@@ -107,21 +125,21 @@ export function OutputContent() {
       let combinedContent = ''
 
       // Add medium summary if available
-      if (outputs.mediumSummary) {
-        combinedContent += outputs.mediumSummary
+      if (mediumSummaryContent) {
+        combinedContent += mediumSummaryContent
       }
 
       // Add a page break and how-to guide if available
-      if (outputs.howToGuide) {
+      if (howToGuideContent) {
         // Add a page break between sections
         combinedContent += '<div style="page-break-before: always;"></div>'
 
         // If the how-to guide doesn't start with a heading, add one
-        if (!outputs.howToGuide.includes('<h1>')) {
+        if (!howToGuideContent.includes('<h1>')) {
           combinedContent += '<h1>How-to Guide</h1>'
         }
 
-        combinedContent += outputs.howToGuide
+        combinedContent += howToGuideContent
       }
 
       // Generate the DOCX with a proper title
@@ -178,10 +196,13 @@ export function OutputContent() {
     }
 
     if (outputs[outputType]) {
+      // Get the current content (edited version if available, otherwise original)
+      const currentContent = editedOutputs[outputType] || outputs[outputType]
+      
       return (
         <div className="flex flex-col h-full">
           <WysiwygEditor
-            content={outputs[outputType]}
+            content={currentContent}
             onChange={(content: string) =>
               handleEditorChange(content, outputType)
             }
