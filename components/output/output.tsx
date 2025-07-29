@@ -5,13 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/spinner'
 
-import { OutputProvider, useOutput } from './output-context'
-import { useFileUpload } from '../file-upload/file-upload-context'
+import { useCoreStore } from '@/stores/core-store'
 import { WysiwygEditor } from '../wysiwyg-editor'
 import type { OutputType } from '@/app/actions'
-import type React from 'react'
-import { useState } from 'react'
-import { generateDOCX } from '@/app/actions'
+import React, { useState } from 'react'
+import { useClientAI } from '@/hooks/use-client-ai'
 import { useToast } from '@/hooks/use-toast'
 import { analytics } from '@/lib/posthog'
 import { WebReviewForm } from '@/components/web-review-form'
@@ -48,38 +46,61 @@ export function Output({ children }: OutputProps) {
 }
 
 export function OutputContent() {
-  const {
-    outputs,
-    errors,
-    isProcessing,
-    processMultipleOutputs,
-    processOutputType,
-  } = useOutput()
-  const { files, fileAttachments, prepareFileAttachments } = useFileUpload()
+  const outputs = useCoreStore((state) => state.outputs)
+  const editedOutputs = useCoreStore((state) => state.editedOutputs)
+  const updateEditedOutput = useCoreStore((state) => state.updateEditedOutput)
+  const errors = useCoreStore((state) => state.errors)
+  const isProcessing = useCoreStore((state) => state.isProcessing)
+  const processMultipleOutputs = useCoreStore(
+    (state) => state.processMultipleOutputs
+  )
+  const processOutputType = useCoreStore((state) => state.processOutputType)
+  const files = useCoreStore((state) => state.files)
+  const fileAttachments = useCoreStore((state) => state.fileAttachments)
+  const setToast = useCoreStore((state) => state.setToast)
   const { currentStep, isStepComplete } = useStepTracker()
-  const [editorContent, setEditorContent] = useState('')
-  const [isDownloading, setIsDownloading] = useState(false)
+  const [editedContent, setEditedContent] = useState<{
+    mediumSummary?: string
+    howToGuide?: string
+  }>({})
   const { toast } = useToast()
+  const { downloadDOCX, isGeneratingDoc, error } = useClientAI()
+
+  // Set up toast function for the store
+  React.useEffect(() => {
+    setToast(toast)
+  }, [setToast, toast])
 
   const handleGenerate = async () => {
-    const attachments = await prepareFileAttachments()
-    processMultipleOutputs(attachments)
+    processMultipleOutputs()
   }
 
   const handleRegenerate = async (outputType: OutputType) => {
-    const attachments = await prepareFileAttachments()
-    processOutputType(outputType, attachments, true)
+    processOutputType(outputType, true)
   }
 
   const handleEditorChange = (content: string, outputType: OutputType) => {
-    if (outputType === 'mediumSummary') {
-      setEditorContent(content)
-    }
+    // Update local state for immediate UI feedback
+    setEditedContent(prev => ({
+      ...prev,
+      [outputType]: content
+    }))
+    
+    // Update the store so the edited content persists and is available for download
+    updateEditedOutput(outputType, content)
   }
 
   const handleCombinedDownload = async () => {
+    // Get the current content (edited or original)
+    const getCurrentContent = (outputType: OutputType) => {
+      return editedOutputs[outputType] || outputs[outputType]
+    }
+
+    const mediumSummaryContent = getCurrentContent('mediumSummary')
+    const howToGuideContent = getCurrentContent('howToGuide')
+
     // Check if we have content to download
-    if (!outputs.mediumSummary && !outputs.howToGuide) {
+    if (!mediumSummaryContent && !howToGuideContent) {
       toast({
         title: 'No content to download',
         description: 'Please generate content first before downloading',
@@ -89,7 +110,6 @@ export function OutputContent() {
       return
     }
 
-    setIsDownloading(true)
     try {
       // Track download in PostHog
       analytics.trackDownload('combined', 'docx')
@@ -105,37 +125,28 @@ export function OutputContent() {
       let combinedContent = ''
 
       // Add medium summary if available
-      if (outputs.mediumSummary) {
-        combinedContent += outputs.mediumSummary
+      if (mediumSummaryContent) {
+        combinedContent += mediumSummaryContent
       }
 
       // Add a page break and how-to guide if available
-      if (outputs.howToGuide) {
+      if (howToGuideContent) {
         // Add a page break between sections
         combinedContent += '<div style="page-break-before: always;"></div>'
 
         // If the how-to guide doesn't start with a heading, add one
-        if (!outputs.howToGuide.includes('<h1>')) {
+        if (!howToGuideContent.includes('<h1>')) {
           combinedContent += '<h1>How-to Guide</h1>'
         }
 
-        combinedContent += outputs.howToGuide
+        combinedContent += howToGuideContent
       }
 
       // Generate the DOCX with a proper title
       const documentTitle = `Research Summary - ${currentDate}`
-      const dataUri = await generateDOCX(combinedContent, documentTitle)
-      const filename = `research-summary-${currentDate
-        .toLowerCase()
-        .replace(/\s+/g, '-')}.docx`
 
-      // Create a link element and trigger download
-      const link = document.createElement('a')
-      link.href = dataUri
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      // Use the client-side DOCX generation and download
+      await downloadDOCX(combinedContent, documentTitle)
 
       toast({
         title: 'Download started',
@@ -160,8 +171,6 @@ export function OutputContent() {
         type: 'error',
         duration: 7000,
       })
-    } finally {
-      setIsDownloading(false)
     }
   }
 
@@ -177,8 +186,7 @@ export function OutputContent() {
             size="sm"
             className="mt-4"
             onClick={async () => {
-              const attachments = await prepareFileAttachments()
-              processMultipleOutputs(attachments)
+              processMultipleOutputs()
             }}
           >
             Try Again
@@ -188,10 +196,13 @@ export function OutputContent() {
     }
 
     if (outputs[outputType]) {
+      // Get the current content (edited version if available, otherwise original)
+      const currentContent = editedOutputs[outputType] || outputs[outputType]
+      
       return (
         <div className="flex flex-col h-full">
           <WysiwygEditor
-            content={outputs[outputType]}
+            content={currentContent}
             onChange={(content: string) =>
               handleEditorChange(content, outputType)
             }
@@ -281,13 +292,13 @@ export function OutputContent() {
           size="lg"
           variant="outline"
           onClick={handleCombinedDownload}
-          disabled={isDownloading || !hasContent}
+          disabled={isGeneratingDoc || !hasContent}
           className="w-full sm:w-1/3 py-6 text-lg"
         >
-          {isDownloading ? (
+          {isGeneratingDoc ? (
             <>
               <Spinner className="h-5 w-5 mr-2 flex-shrink-0" />
-              <span className="truncate">Downloading...</span>
+              <span className="truncate">Generating...</span>
             </>
           ) : (
             <>

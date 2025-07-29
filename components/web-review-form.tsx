@@ -8,8 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { analytics } from '@/lib/posthog'
-import { useOutput } from './output/output-context'
-import { generateDOCX } from '@/app/actions'
+import { useCoreStore } from '@/stores/core-store'
 import { useStepTracker } from '@/hooks/use-step-tracker'
 
 interface WebReviewFormProps {
@@ -22,7 +21,8 @@ export function WebReviewForm({
   disabled = false,
 }: WebReviewFormProps) {
   const { toast } = useToast()
-  const { outputs } = useOutput()
+  const outputs = useCoreStore((state) => state.outputs)
+  const editedOutputs = useCoreStore((state) => state.editedOutputs)
   const { currentStep, isStepComplete } = useStepTracker()
   const [primaryAuthor, setPrimaryAuthor] = useState('')
   const [secondaryAuthors, setSecondaryAuthors] = useState('')
@@ -31,6 +31,11 @@ export function WebReviewForm({
 
   const isStep3Current = currentStep === 3
   const isStep3Complete = isStepComplete(3)
+
+  // Helper function to get current content (edited or original)
+  const getCurrentContent = (outputType: 'mediumSummary' | 'howToGuide') => {
+    return editedOutputs[outputType] || outputs[outputType]
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,7 +51,10 @@ export function WebReviewForm({
     }
 
     // Check if we have content to send
-    if (!outputs.mediumSummary && !outputs.howToGuide) {
+    const mediumSummaryContent = getCurrentContent('mediumSummary')
+    const howToGuideContent = getCurrentContent('howToGuide')
+    
+    if (!mediumSummaryContent && !howToGuideContent) {
       toast({
         title: 'No content to send',
         description: 'Please generate content first before sending for review.',
@@ -73,25 +81,28 @@ export function WebReviewForm({
       let combinedContent = ''
 
       // Add medium summary if available
-      if (outputs.mediumSummary) {
-        combinedContent += outputs.mediumSummary
+      if (mediumSummaryContent) {
+        combinedContent += mediumSummaryContent
       }
 
       // Add a page break and how-to guide if available
-      if (outputs.howToGuide) {
+      if (howToGuideContent) {
         // Add a page break between sections
         combinedContent += '<div style="page-break-before: always;"></div>'
 
         // If the how-to guide doesn't start with a heading, add one
-        if (!outputs.howToGuide.includes('<h1>')) {
+        if (!howToGuideContent.includes('<h1>')) {
           combinedContent += '<h1>How-to Guide</h1>'
         }
 
-        combinedContent += outputs.howToGuide
+        combinedContent += howToGuideContent
       }
 
       // Generate the DOCX with a proper title including author info
       const documentTitle = `Research Summary - ${currentDate} - ${primaryAuthor}`
+
+      // Use the server-side DOCX generation
+      const { generateDOCX } = await import('@/app/actions')
       const dataUri = await generateDOCX(combinedContent, documentTitle)
 
       // Convert data URI to Blob

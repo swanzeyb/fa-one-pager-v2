@@ -1,30 +1,98 @@
-# Multiple file upload
+# FA One Pager v2
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+A Next.js application for processing multiple files and generating content outputs using AI services. The project has been migrated from React Context to Zustand for improved state management.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/flourish-design/v0-multiple-file-upload)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/kHYd8Eq1Lcb)
+## Features
 
-## Overview
+- **File Upload**: Support for multiple file types (PDF, TXT, DOCX, images)
+- **AI Content Generation**: Generate different types of content outputs from uploaded files
+- **Real-time Processing**: Track processing status with step-by-step progress
+- **Responsive Design**: Built with Tailwind CSS and shadcn/ui components
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+## Architecture
 
-## Deployment
+### State Management
 
-Your project is live at:
+The application uses Zustand stores for efficient state management:
 
-**[https://vercel.com/flourish-design/v0-multiple-file-upload](https://vercel.com/flourish-design/v0-multiple-file-upload)**
+- **Core Store** (`stores/core-store.ts`): Manages file uploads, outputs, and step tracking
+- **UI Store** (`stores/ui-store.ts`): Handles UI-specific state like drag-over indicators
+- **Feature Store** (`stores/feature-store.ts`): Manages feature flags
+- **Image Store** (`stores/image-store.ts`): Handles image-related state
 
-## Build your app
+### Services
 
-Continue building your app on:
+Business logic is separated into service modules:
 
-**[https://v0.dev/chat/projects/kHYd8Eq1Lcb](https://v0.dev/chat/projects/kHYd8Eq1Lcb)**
+- **File Service** (`services/file-service.ts`): File validation and processing
+- **AI Service** (`services/ai-service.ts`): AI content generation
+- **Analytics Service** (`services/analytics-service.ts`): Usage tracking
 
-## How It Works
+### Convenience Hooks
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+Custom hooks provide simplified access to store functionality:
+
+- `useFiles()`: File management operations
+- `useOutputs()`: Output generation and management
+
+## Usage Examples
+
+### Using Store Directly
+
+```typescript
+import { useCoreStore } from '@/stores/core-store'
+
+function MyComponent() {
+  const files = useCoreStore((state) => state.files)
+  const addFiles = useCoreStore((state) => state.addFiles)
+  const processOutputType = useCoreStore((state) => state.processOutputType)
+
+  // Component logic...
+}
+```
+
+### Using Convenience Hooks
+
+```typescript
+import { useFiles, useOutputs } from '@/hooks'
+
+function MyComponent() {
+  const { files, addFiles, removeFile } = useFiles()
+  const { outputs, processOutputType, isProcessing } = useOutputs()
+
+  // Component logic...
+}
+```
+
+## Development
+
+### Prerequisites
+
+- Node.js 18+
+- pnpm
+
+### Getting Started
+
+```bash
+# Install dependencies
+pnpm install
+
+# Run development server
+pnpm dev
+
+# Build for production
+pnpm build
+
+# Start production server
+pnpm start
+```
+
+## Migration Notes
+
+This project was successfully migrated from React Context to Zustand stores for:
+
+- ✅ Improved performance (reduced re-renders)
+- ✅ Centralized business logic
+- ✅ Better testability
+- ✅ Cleaner component APIs
+- ✅ Reduced boilerplate code

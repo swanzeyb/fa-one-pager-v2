@@ -1,10 +1,12 @@
 'use client'
 
-import type React from 'react'
+import React from 'react'
 import { Upload, FileText, FileType, Trash2, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { useFileUpload } from './file-upload-context'
+import { useCoreStore } from '@/stores/core-store'
+import { useUIStore } from '@/stores/ui-store'
+import { useToast } from '@/hooks/use-toast'
 import {
   Tooltip,
   TooltipContent,
@@ -45,23 +47,34 @@ export function FileUpload({ children }: FileUploadProps) {
   )
 }
 
-export function FileUploadArea() {
-  const { isDragging, setIsDragging, addFiles } = useFileUpload()
+export function FileDropzone() {
+  const addFiles = useCoreStore((state) => state.addFiles)
+  const setToast = useCoreStore((state) => state.setToast)
+  const isDragOverActive = useUIStore((s) => s.isDragOverActive)
+  const setDragOverActive = useUIStore((s) => s.setDragOverActive)
   const { currentStep } = useStepTracker()
   const isCurrentStep = currentStep === 1
 
+  // Call useToast at the top level of the component
+  const { toast } = useToast()
+
+  // Set up toast function for the store
+  React.useEffect(() => {
+    setToast(toast)
+  }, [setToast, toast])
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
-    setIsDragging(true)
+    setDragOverActive(true)
   }
 
   const handleDragLeave = () => {
-    setIsDragging(false)
+    setDragOverActive(false)
   }
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
-    setIsDragging(false)
+    setDragOverActive(false)
 
     if (e.dataTransfer.files) {
       const newFiles = Array.from(e.dataTransfer.files)
@@ -73,6 +86,8 @@ export function FileUploadArea() {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files)
       addFiles(newFiles)
+      // Reset the input value to allow selecting the same file again
+      e.target.value = ''
     }
   }
 
@@ -80,7 +95,7 @@ export function FileUploadArea() {
     <>
       <div
         className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center h-64 mb-4 transition-colors ${
-          isDragging
+          isDragOverActive
             ? 'border-primary bg-primary/10'
             : 'border-muted-foreground/25'
         }`}
@@ -132,8 +147,7 @@ export function FileUploadArea() {
           <div className="space-y-1 text-xs">
             <div className="font-medium">File Limits:</div>
             <div>• Max 10 files</div>
-            <div>• Max 500 pages per file</div>
-            <div>• Max 50 MB per file</div>
+            <div>• Max 15 MB of files</div>
             <div className="mt-2">
               <span className="font-medium">Supported formats:</span> PDF, TXT
             </div>
@@ -145,7 +159,8 @@ export function FileUploadArea() {
 }
 
 export function FileList() {
-  const { files, removeFile } = useFileUpload()
+  const files = useCoreStore((state) => state.files)
+  const removeFile = useCoreStore((state) => state.removeFile)
 
   return (
     <>
@@ -157,7 +172,7 @@ export function FileList() {
               No files uploaded yet
             </p>
           ) : (
-            files.map((file, index) => (
+            files.map((file: File, index: number) => (
               <div
                 key={index}
                 className="flex items-center justify-between text-sm p-3 bg-muted rounded-md group hover:bg-muted/80"

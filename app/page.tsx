@@ -1,16 +1,12 @@
 'use client'
 
-import { ImageUploadProvider } from '@/components/image-upload-context'
 import { Toaster } from '@/components/ui/toaster'
 import {
   FileUpload,
-  FileUploadArea,
+  FileDropzone,
   FileList,
 } from '@/components/file-upload/file-upload'
 import { Output, OutputContent } from '@/components/output/output'
-import { FileUploadProvider } from '@/components/file-upload/file-upload-context'
-import { FeatureFlagProvider } from '@/components/feature-flag-provider'
-import { OutputProvider } from '@/components/output/output-context'
 import { useStepTracker } from '@/hooks/use-step-tracker'
 
 function StepBanner() {
@@ -79,7 +75,7 @@ function AppContent() {
         {/* Left Column - File Upload Area */}
         <div className="w-full lg:w-1/3 p-4 pr-2">
           <FileUpload>
-            <FileUploadArea />
+            <FileDropzone />
             <FileList />
           </FileUpload>
         </div>
@@ -97,15 +93,9 @@ function AppContent() {
 
 export default function FileUploadInterface() {
   return (
-    <FeatureFlagProvider>
-      <ImageUploadProvider>
-        <FileUploadProvider>
-          <OutputProvider>
-            <AppContent />
-            <Toaster />
-          </OutputProvider>
-        </FileUploadProvider>
-      </ImageUploadProvider>
-    </FeatureFlagProvider>
+    <>
+      <AppContent />
+      <Toaster />
+    </>
   )
 }
