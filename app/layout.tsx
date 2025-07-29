@@ -14,7 +14,6 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <AppCheckInitializer />
         <PHProvider>{children}</PHProvider>
       </body>
     </html>
@@ -23,11 +22,4 @@ export default function RootLayout({
 
 export const metadata = {
   generator: 'v0.dev',
-}
-
-// App Check Initializer Component
-function AppCheckInitializer() {
-  // App Check is already initialized in firebase.ts
-  // This component just ensures it happens early in the app lifecycle
-  return null // This component doesn't render anything
 }

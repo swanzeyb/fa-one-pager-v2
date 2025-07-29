@@ -20,16 +20,3 @@ export const ai = getAI(app, { backend: new GoogleAIBackend() })
 if (process.env.NODE_ENV === 'development') {
   console.log('Firebase initialized for project:', firebaseConfig.projectId)
 }
-
-// Initialize App Check (only in browser)
-if (typeof window !== 'undefined') {
-  import('./app-check').then(
-    ({ initializeFirebaseAppCheck, initializeAppCheckDebug }) => {
-      // Use debug mode in development
-      if (process.env.NODE_ENV === 'development') {
-        initializeAppCheckDebug()
-      }
-      initializeFirebaseAppCheck()
-    }
-  )
-}
