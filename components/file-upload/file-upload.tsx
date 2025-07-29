@@ -86,6 +86,8 @@ export function FileDropzone() {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files)
       addFiles(newFiles)
+      // Reset the input value to allow selecting the same file again
+      e.target.value = ''
     }
   }
 
